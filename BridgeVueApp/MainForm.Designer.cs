@@ -30,7 +30,9 @@
         {
             menuStrip1 = new MenuStrip();
             adminToolStripMenuItem = new ToolStripMenuItem();
+            predictionsToolStripMenuItem = new ToolStripMenuItem();
             setupToolStripMenuItem = new ToolStripMenuItem();
+            dataInsightsToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -45,10 +47,17 @@
             // 
             // adminToolStripMenuItem
             // 
-            adminToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { setupToolStripMenuItem });
+            adminToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { predictionsToolStripMenuItem, setupToolStripMenuItem, dataInsightsToolStripMenuItem });
             adminToolStripMenuItem.Name = "adminToolStripMenuItem";
             adminToolStripMenuItem.Size = new Size(55, 20);
             adminToolStripMenuItem.Text = "Admin";
+            // 
+            // predictionsToolStripMenuItem
+            // 
+            predictionsToolStripMenuItem.Name = "predictionsToolStripMenuItem";
+            predictionsToolStripMenuItem.Size = new Size(180, 22);
+            predictionsToolStripMenuItem.Text = "Predictions";
+            predictionsToolStripMenuItem.Click += predictionsToolStripMenuItem_Click;
             // 
             // setupToolStripMenuItem
             // 
@@ -56,6 +65,13 @@
             setupToolStripMenuItem.Size = new Size(180, 22);
             setupToolStripMenuItem.Text = "Setup";
             setupToolStripMenuItem.Click += setupToolStripMenuItem_Click;
+            // 
+            // dataInsightsToolStripMenuItem
+            // 
+            dataInsightsToolStripMenuItem.Name = "dataInsightsToolStripMenuItem";
+            dataInsightsToolStripMenuItem.Size = new Size(180, 22);
+            dataInsightsToolStripMenuItem.Text = "Data Insights";
+            dataInsightsToolStripMenuItem.Click += dataInsightsToolStripMenuItem_Click;
             // 
             // MainForm
             // 
@@ -65,7 +81,7 @@
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
-            Text = "MainForm";
+            Text = "BridgeVue";
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             ResumeLayout(false);
@@ -77,5 +93,7 @@
         private MenuStrip menuStrip1;
         private ToolStripMenuItem adminToolStripMenuItem;
         private ToolStripMenuItem setupToolStripMenuItem;
+        private ToolStripMenuItem predictionsToolStripMenuItem;
+        private ToolStripMenuItem dataInsightsToolStripMenuItem;
     }
 }

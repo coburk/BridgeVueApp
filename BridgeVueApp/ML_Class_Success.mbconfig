@@ -1,0 +1,426 @@
+﻿{
+  "Scenario": "Classification",
+  "DataSource": {
+    "Type": "SQL",
+    "Version": 1,
+    "ColumnProperties": [
+      {
+        "ColumnName": "StudentID",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Grade",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Age",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Gender",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Ethnicity",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "SpecialEd",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Boolean",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "IEP",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Boolean",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntryReason",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "String",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "PriorIncidents",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "OfficeReferrals",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Suspensions",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Expulsions",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntryAcademicLevel",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntrySocialSkillsLevel",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AvgVerbalAggression",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AvgPhysicalAggression",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AvgAcademicEngagement",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "RedZonePct",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "ExitReason",
+        "ColumnPurpose": "Label",
+        "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "LengthOfStay",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      }
+    ],
+    "ConnectionString": "Data Source=localhost;Initial Catalog=BridgeVue;Integrated Security=True;Trust Server Certificate=True",
+    "CommandString": "SELECT CAST([Grade] as REAL), CAST([Age] as REAL), CAST([Gender] as NVARCHAR(MAX)), CAST([Ethnicity] as NVARCHAR(MAX)), [SpecialEd], [IEP], CAST([EntryReason] as NVARCHAR(MAX)), CAST([PriorIncidents] as REAL), CAST([OfficeReferrals] as REAL), CAST([Suspensions] as REAL), CAST([Expulsions] as REAL), CAST([EntryAcademicLevel] as NVARCHAR(MAX)), CAST([EntrySocialSkillsLevel] as NVARCHAR(MAX)), CAST([AvgVerbalAggression] as REAL), CAST([AvgPhysicalAggression] as REAL), CAST([AvgAcademicEngagement] as REAL), CAST([RedZonePct] as REAL), CAST([ExitReason] as NVARCHAR(MAX)), CAST([LengthOfStay] as REAL) FROM [dbo].[vStudentMLData]",
+    "DatabaseName": "BridgeVue",
+    "SelectedTableDbo": "dbo",
+    "TableName": "vStudentMLData"
+  },
+  "Environment": {
+    "Type": "LocalCPU",
+    "Version": 1
+  },
+  "RunHistory": {
+    "Version": 3,
+    "Type": "Result",
+    "Trials": [
+      {
+        "Version": 1,
+        "Type": "Trial",
+        "TrainerName": "LbfgsLogisticRegressionOva",
+        "Score": 0.18749206349206349,
+        "RuntimeInSeconds": 1.356,
+        "Parameter": {
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e8 * e12",
+          "e0": {
+            "OutputColumnNames": [
+              "Gender",
+              "Ethnicity",
+              "SpecialEd",
+              "IEP",
+              "EntryAcademicLevel",
+              "EntrySocialSkillsLevel"
+            ],
+            "InputColumnNames": [
+              "Gender",
+              "Ethnicity",
+              "SpecialEd",
+              "IEP",
+              "EntryAcademicLevel",
+              "EntrySocialSkillsLevel"
+            ]
+          },
+          "e1": {
+            "OutputColumnNames": [
+              "Grade",
+              "Age",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "RedZonePct",
+              "LengthOfStay"
+            ],
+            "InputColumnNames": [
+              "Grade",
+              "Age",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "RedZonePct",
+              "LengthOfStay"
+            ]
+          },
+          "e12": {
+            "OutputColumnName": "PredictedLabel",
+            "InputColumnName": "PredictedLabel"
+          },
+          "e2": {
+            "InputColumnName": "EntryReason",
+            "OutputColumnName": "EntryReason"
+          },
+          "e3": {
+            "InputColumnNames": [
+              "Gender",
+              "Ethnicity",
+              "SpecialEd",
+              "IEP",
+              "EntryAcademicLevel",
+              "EntrySocialSkillsLevel",
+              "Grade",
+              "Age",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "RedZonePct",
+              "LengthOfStay",
+              "EntryReason"
+            ],
+            "OutputColumnName": "Features"
+          },
+          "e4": {
+            "OutputColumnName": "ExitReason",
+            "InputColumnName": "ExitReason",
+            "AddKeyValueAnnotationsAsText": false
+          },
+          "e8": {
+            "L1Regularization": 1.0,
+            "L2Regularization": 1.0,
+            "LabelColumnName": "ExitReason",
+            "FeatureColumnName": "Features"
+          }
+        }
+      },
+      {
+        "Version": 1,
+        "Type": "Trial",
+        "TrainerName": "FastTreeOva",
+        "Score": 0.1623174603174603,
+        "RuntimeInSeconds": 2.697,
+        "Parameter": {
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e5 * e12",
+          "e0": {
+            "OutputColumnNames": [
+              "Gender",
+              "Ethnicity",
+              "SpecialEd",
+              "IEP",
+              "EntryAcademicLevel",
+              "EntrySocialSkillsLevel"
+            ],
+            "InputColumnNames": [
+              "Gender",
+              "Ethnicity",
+              "SpecialEd",
+              "IEP",
+              "EntryAcademicLevel",
+              "EntrySocialSkillsLevel"
+            ]
+          },
+          "e1": {
+            "OutputColumnNames": [
+              "Grade",
+              "Age",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "RedZonePct",
+              "LengthOfStay"
+            ],
+            "InputColumnNames": [
+              "Grade",
+              "Age",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "RedZonePct",
+              "LengthOfStay"
+            ]
+          },
+          "e12": {
+            "OutputColumnName": "PredictedLabel",
+            "InputColumnName": "PredictedLabel"
+          },
+          "e2": {
+            "InputColumnName": "EntryReason",
+            "OutputColumnName": "EntryReason"
+          },
+          "e3": {
+            "InputColumnNames": [
+              "Gender",
+              "Ethnicity",
+              "SpecialEd",
+              "IEP",
+              "EntryAcademicLevel",
+              "EntrySocialSkillsLevel",
+              "Grade",
+              "Age",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "RedZonePct",
+              "LengthOfStay",
+              "EntryReason"
+            ],
+            "OutputColumnName": "Features"
+          },
+          "e4": {
+            "OutputColumnName": "ExitReason",
+            "InputColumnName": "ExitReason",
+            "AddKeyValueAnnotationsAsText": false
+          },
+          "e5": {
+            "NumberOfLeaves": 4,
+            "MinimumExampleCountPerLeaf": 20,
+            "NumberOfTrees": 4,
+            "MaximumBinCountPerFeature": 254,
+            "FeatureFraction": 1.0,
+            "LearningRate": 0.099999999999999978,
+            "LabelColumnName": "ExitReason",
+            "FeatureColumnName": "Features",
+            "DiskTranspose": false
+          }
+        }
+      }
+    ],
+    "Estimators": {
+      "e0": "OneHotEncoding",
+      "e1": "ReplaceMissingValues",
+      "e2": "FeaturizeText",
+      "e3": "Concatenate",
+      "e4": "MapValueToKey",
+      "e5": "FastTreeOva",
+      "e6": "FastForestOva",
+      "e7": "LightGbmMulti",
+      "e8": "LbfgsLogisticRegressionOva",
+      "e9": "LbfgsMaximumEntropyMulti",
+      "e10": "SdcaMaximumEntropyMulti",
+      "e11": "SdcaLogisticRegressionOva",
+      "e12": "MapKeyToValue"
+    },
+    "Schema": "e0 * e1 * e2 * e3 * e4 * (e5 + e6 + e7 + e8 + e9 + e10 + e11) * e12",
+    "MetricName": "MacroAccuracy",
+    "ModelFilePath": "C:\\Users\\cburk\\source\\repos\\BridgeVueApp\\BridgeVueApp\\ML_Class_Success.mlnet"
+  },
+  "Type": "TrainingConfig",
+  "Version": 5,
+  "TrainingOption": {
+    "Version": 2,
+    "Subsampling": false,
+    "Tuner": "eci-cfo",
+    "Type": "ClassificationTrainingOption",
+    "TrainingTime": 90,
+    "OptimizeMetric": "MacroAccuracy",
+    "LabelColumn": "ExitReason",
+    "AvailableTrainers": [
+      "SDCA",
+      "LBFGS",
+      "LGBM",
+      "FASTTREE",
+      "FASTFOREST"
+    ],
+    "ValidationOption": {
+      "Version": 0,
+      "Type": "CrossValidationValidationOption",
+      "NumberOfFolds": 5
+    }
+  }
+}
