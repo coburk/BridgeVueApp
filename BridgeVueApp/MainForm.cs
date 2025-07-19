@@ -22,5 +22,16 @@ namespace BridgeVueApp
             SetupForm setupForm = new SetupForm();
             setupForm.ShowDialog();
         }
+
+        private void predictionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PredictionForm predictForm = new PredictionForm();
+            predictForm.ShowDialog(); // Modal window
+        }
+
+        private void dataInsightsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
