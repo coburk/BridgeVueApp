@@ -33,7 +33,9 @@
             predictionsToolStripMenuItem = new ToolStripMenuItem();
             setupToolStripMenuItem = new ToolStripMenuItem();
             dataInsightsToolStripMenuItem = new ToolStripMenuItem();
+            pbxLogo = new PictureBox();
             menuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pbxLogo).BeginInit();
             SuspendLayout();
             // 
             // menuStrip1
@@ -55,35 +57,49 @@
             // predictionsToolStripMenuItem
             // 
             predictionsToolStripMenuItem.Name = "predictionsToolStripMenuItem";
-            predictionsToolStripMenuItem.Size = new Size(180, 22);
+            predictionsToolStripMenuItem.Size = new Size(142, 22);
             predictionsToolStripMenuItem.Text = "Predictions";
             predictionsToolStripMenuItem.Click += predictionsToolStripMenuItem_Click;
             // 
             // setupToolStripMenuItem
             // 
             setupToolStripMenuItem.Name = "setupToolStripMenuItem";
-            setupToolStripMenuItem.Size = new Size(180, 22);
+            setupToolStripMenuItem.Size = new Size(142, 22);
             setupToolStripMenuItem.Text = "Setup";
             setupToolStripMenuItem.Click += setupToolStripMenuItem_Click;
             // 
             // dataInsightsToolStripMenuItem
             // 
             dataInsightsToolStripMenuItem.Name = "dataInsightsToolStripMenuItem";
-            dataInsightsToolStripMenuItem.Size = new Size(180, 22);
+            dataInsightsToolStripMenuItem.Size = new Size(142, 22);
             dataInsightsToolStripMenuItem.Text = "Data Insights";
             dataInsightsToolStripMenuItem.Click += dataInsightsToolStripMenuItem_Click;
+            // 
+            // pbxLogo
+            // 
+            pbxLogo.Image = Properties.Resources.BridgeVue_Logo;
+            pbxLogo.Location = new Point(106, 27);
+            pbxLogo.MaximumSize = new Size(600, 400);
+            pbxLogo.Name = "pbxLogo";
+            pbxLogo.Size = new Size(600, 400);
+            pbxLogo.SizeMode = PictureBoxSizeMode.Zoom;
+            pbxLogo.TabIndex = 1;
+            pbxLogo.TabStop = false;
+            pbxLogo.Click += pbxLogo_Click;
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(pbxLogo);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
             Text = "BridgeVue";
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pbxLogo).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -95,5 +111,6 @@
         private ToolStripMenuItem setupToolStripMenuItem;
         private ToolStripMenuItem predictionsToolStripMenuItem;
         private ToolStripMenuItem dataInsightsToolStripMenuItem;
+        private PictureBox pbxLogo;
     }
 }

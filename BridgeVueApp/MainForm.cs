@@ -33,5 +33,10 @@ namespace BridgeVueApp
         {
 
         }
+
+        private void pbxLogo_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

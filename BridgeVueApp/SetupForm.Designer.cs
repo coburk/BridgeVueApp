@@ -3,14 +3,12 @@ namespace BridgeVueApp
 {
     partial class SetupForm
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
+        
+        /// Required designer variable.        
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
+        
+        /// Clean up any resources being used.        
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
@@ -23,10 +21,10 @@ namespace BridgeVueApp
 
         #region Windows Form Designer generated code
 
-        /// <summary>
+
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
-        /// </summary>
+
         private void InitializeComponent()
         {
             lblSetup = new Label();
@@ -38,6 +36,8 @@ namespace BridgeVueApp
             btnLoadIntakeData = new Button();
             btnGenerateData = new Button();
             gbxDatbase = new GroupBox();
+            btnExitOutcomeAvgs = new Button();
+            btnExitOutcomeCount = new Button();
             gbxLoadData = new GroupBox();
             gbxGenerate = new GroupBox();
             btnSaveGeneratedCSV = new Button();
@@ -80,7 +80,7 @@ namespace BridgeVueApp
             // lblStatus
             // 
             lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(34, 456);
+            lblStatus.Location = new Point(34, 260);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(112, 15);
             lblStatus.TabIndex = 4;
@@ -129,14 +129,36 @@ namespace BridgeVueApp
             // gbxDatbase
             // 
             gbxDatbase.BackColor = SystemColors.Desktop;
+            gbxDatbase.Controls.Add(btnExitOutcomeAvgs);
+            gbxDatbase.Controls.Add(btnExitOutcomeCount);
             gbxDatbase.Controls.Add(btnCreateDatabaseAndTables);
             gbxDatbase.Controls.Add(btnViewDatabaseInfo);
             gbxDatbase.Location = new Point(34, 56);
             gbxDatbase.Name = "gbxDatbase";
-            gbxDatbase.Size = new Size(228, 100);
+            gbxDatbase.Size = new Size(228, 164);
             gbxDatbase.TabIndex = 9;
             gbxDatbase.TabStop = false;
             gbxDatbase.Text = "Database";
+            // 
+            // btnExitOutcomeAvgs
+            // 
+            btnExitOutcomeAvgs.Location = new Point(15, 128);
+            btnExitOutcomeAvgs.Name = "btnExitOutcomeAvgs";
+            btnExitOutcomeAvgs.Size = new Size(192, 23);
+            btnExitOutcomeAvgs.TabIndex = 7;
+            btnExitOutcomeAvgs.Text = "Behavior Avg. by Exit Outcome";
+            btnExitOutcomeAvgs.UseVisualStyleBackColor = true;
+            btnExitOutcomeAvgs.Click += btnExitOutcomeAvgs_Click;
+            // 
+            // btnExitOutcomeCount
+            // 
+            btnExitOutcomeCount.Location = new Point(15, 95);
+            btnExitOutcomeCount.Name = "btnExitOutcomeCount";
+            btnExitOutcomeCount.Size = new Size(192, 23);
+            btnExitOutcomeCount.TabIndex = 6;
+            btnExitOutcomeCount.Text = "Count of Each Exit Outcome";
+            btnExitOutcomeCount.UseVisualStyleBackColor = true;
+            btnExitOutcomeCount.Click += btnExitOutcomeCount_Click;
             // 
             // gbxLoadData
             // 
@@ -144,7 +166,7 @@ namespace BridgeVueApp
             gbxLoadData.Controls.Add(btnLoadStudentProfile);
             gbxLoadData.Controls.Add(btnLoadIntakeData);
             gbxLoadData.Controls.Add(btnLoadDailyBehavior);
-            gbxLoadData.Location = new Point(34, 177);
+            gbxLoadData.Location = new Point(527, 56);
             gbxLoadData.Name = "gbxLoadData";
             gbxLoadData.Size = new Size(228, 118);
             gbxLoadData.TabIndex = 10;
@@ -157,7 +179,7 @@ namespace BridgeVueApp
             gbxGenerate.Controls.Add(btnSaveGeneratedCSV);
             gbxGenerate.Controls.Add(btnLoadGeneratedData);
             gbxGenerate.Controls.Add(btnGenerateData);
-            gbxGenerate.Location = new Point(34, 316);
+            gbxGenerate.Location = new Point(280, 56);
             gbxGenerate.Name = "gbxGenerate";
             gbxGenerate.Size = new Size(228, 127);
             gbxGenerate.TabIndex = 11;
@@ -188,7 +210,7 @@ namespace BridgeVueApp
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(311, 567);
+            ClientSize = new Size(778, 567);
             Controls.Add(gbxGenerate);
             Controls.Add(gbxLoadData);
             Controls.Add(gbxDatbase);
@@ -224,5 +246,7 @@ namespace BridgeVueApp
         private GroupBox gbxGenerate;
         private Button btnSaveGeneratedCSV;
         private Button btnLoadGeneratedData;
+        private Button btnExitOutcomeCount;
+        private Button btnExitOutcomeAvgs;
     }
 }
