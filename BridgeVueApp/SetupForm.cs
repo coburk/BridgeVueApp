@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 
 namespace BridgeVueApp
@@ -141,19 +142,33 @@ namespace BridgeVueApp
                     string query = @"
                         SELECT t.NAME AS TableName, SUM(p.rows) AS [RowCount]
                         FROM sys.tables t
-                        INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id
-                        INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
-                        WHERE t.is_ms_shipped = 0 AND i.type <= 1
+                        INNER JOIN sys.indexes i 
+                            ON t.OBJECT_ID = i.object_id
+                        INNER JOIN sys.partitions p 
+                            ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
+                        WHERE t.is_ms_shipped = 0 
+                            AND i.type <= 1
                         GROUP BY t.NAME
                         ORDER BY t.NAME;";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     SqlDataReader reader = cmd.ExecuteReader();
-                    string result = "Database Info:\n";
+
+                    StringBuilder result = new StringBuilder();
+                    result.AppendLine("Table Row Counts in BridgeVue Database");
+                    result.AppendLine("----------------------------------------");
+                    result.AppendLine($"{"Table Name",-25}{"Rows",10}");
+                    result.AppendLine("----------------------------------------");
+
                     while (reader.Read())
                     {
-                        result += $"Table: {reader[0]}, Rows: {reader[1]}\n";
+                        string tableName = reader["TableName"].ToString();
+                        int rowCount = Convert.ToInt32(reader["RowCount"]);
+
+                        result.AppendLine($"{tableName,-25}{rowCount,10:N0}");  // Format with commas
                     }
-                    lblStatus.Text = result;
+
+                    lblStatus.Font = new Font("Consolas", 10);  // Monospaced for alignment
+                    lblStatus.Text = result.ToString();
                 }
             }
             catch (Exception ex)
@@ -467,12 +482,123 @@ namespace BridgeVueApp
                 csv.WriteRecords(generatedBehavior);
             }
 
+            using (var writer = new StreamWriter(Path.Combine(folderPath, "ExitData.csv")))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csv.WriteRecords(generatedExitData);
+            }
+
             lblStatus.Text = $"Synthetic data saved to {folderPath}";
+
+
+            btnLoadStudentProfile_Click(sender, e);
         }
 
         private void btnLoadStudentProfile_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void btnExitOutcomeCount_Click(object sender, EventArgs e)
+        {
+            // Analyze the Data Distribution
+            // Count of Each Exit Outcome
+
+            {
+                try
+                {
+                    using (SqlConnection conn = new SqlConnection(dbConnection))
+                    {
+                        conn.Open();
+                        string query = @"
+                        SELECT ExitReason, COUNT(*) AS NumStudents
+                        FROM ExitData
+                        GROUP BY ExitReason;";
+
+                        SqlCommand cmd = new SqlCommand(query, conn);
+                        SqlDataReader reader = cmd.ExecuteReader();
+
+                        // Use a StringBuilder for performance
+                        StringBuilder result = new StringBuilder();
+                        result.AppendLine("Count of Each Exit Outcome:");
+                        result.AppendLine("------------------------------");
+                        result.AppendLine($"{"Outcome",-25}{"Count",5}");
+                        result.AppendLine("------------------------------");
+
+                        while (reader.Read())
+                        {
+                            string outcome = reader["ExitReason"].ToString();
+                            int count = Convert.ToInt32(reader["NumStudents"]);
+
+                            result.AppendLine($"{outcome,-25}{count,5}");
+                        }
+
+                        lblStatus.Font = new Font("Consolas", 10);  // Use monospaced font for perfect alignment
+                        lblStatus.Text = result.ToString();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                    lblStatus.Text = "Failed to retrieve database info.";
+                }
+            }
+        }
+
+        private void btnExitOutcomeAvgs_Click(object sender, EventArgs e)
+        {
+            // Analyze the Data Distribution
+            // Behavior Averages by Exit Outcome
+
+            {
+                try
+                {
+                    using (SqlConnection conn = new SqlConnection(dbConnection))
+                    {
+                        conn.Open();
+                        string query = @"
+                        SELECT ExitReason,
+                            AVG(AvgVerbalAggression) AS AvgVerbal,
+                            AVG(AvgPhysicalAggression) AS AvgPhysical,
+                            AVG(AvgAcademicEngagement) AS AvgEngagement,
+                            AVG(RedZonePct) AS AvgRedZone
+                        FROM vStudentPredictionData v
+                        JOIN ExitData e 
+                            ON v.StudentID = e.StudentID
+                        GROUP BY ExitReason;";
+
+                        SqlCommand cmd = new SqlCommand(query, conn);
+                        SqlDataReader reader = cmd.ExecuteReader();
+
+                        // Use a StringBuilder for performance
+                        StringBuilder result = new StringBuilder();
+                        result.AppendLine("Behavior Averages by Exit Outcome:");
+                        result.AppendLine("---------------------------------------------------------------------");
+                        result.AppendLine($"{"Outcome",-25}{"Verbal",8}{"Physical",9}{"Engagement",12}{"Red Zone",10}");
+                        result.AppendLine("---------------------------------------------------------------------");
+
+                        while (reader.Read())
+                        {
+                            string outcome = reader["ExitReason"].ToString();
+                            float avgVerbal = Convert.ToSingle(reader["AvgVerbal"]);
+                            float avgPhysical = Convert.ToSingle(reader["AvgPhysical"]);
+                            float avgEngagement = Convert.ToSingle(reader["AvgEngagement"]);
+                            float avgRedZone = Convert.ToSingle(reader["AvgRedZone"]);
+
+                            result.AppendLine($"{outcome,-25}{avgVerbal,8:F2}{avgPhysical,9:F2}{avgEngagement,12:F2}{avgRedZone,10:P1}");
+                        }
+
+                        lblStatus.Font = new Font("Consolas", 10);  // Use monospace for alignment
+                        lblStatus.Text = result.ToString();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                    lblStatus.Text = "Failed to retrieve database info.";
+                }
+            
+            }
         }
     }
 
