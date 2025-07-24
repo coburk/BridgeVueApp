@@ -141,11 +141,49 @@ namespace BridgeVueApp
                     string query = @"
                         SELECT t.NAME AS TableName, SUM(p.rows) AS [RowCount]
                         FROM sys.tables t
-                        INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id
-                        INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
-                        WHERE t.is_ms_shipped = 0 AND i.type <= 1
+                        INNER JOIN sys.indexes i 
+                            ON t.OBJECT_ID = i.object_id
+                        INNER JOIN sys.partitions p 
+                            ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
+                        WHERE t.is_ms_shipped = 0 
+                            AND i.type <= 1
                         GROUP BY t.NAME
                         ORDER BY t.NAME;";
+                    SqlCommand cmd = new SqlCommand(query, conn);
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    string result = "Database Info:\n";
+                    while (reader.Read())
+                    {
+                        result += $"Table: {reader[0]}, Rows: {reader[1]}\n";
+                    }
+                    lblStatus.Text = result;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                lblStatus.Text = "Failed to retrieve database info.";
+            }
+        }
+
+
+        private void btnExitOutcomeAvgs_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(dbConnection))
+                {
+                    conn.Open();
+                    string query = @"
+                        SELECT ExitReason,
+                            AVG(AvgVerbalAggression) AS AvgVerbal,
+                            AVG(AvgPhysicalAggression) AS AvgPhysical,
+                            AVG(AvgAcademicEngagement) AS AvgEngagement,
+                            AVG(RedZonePct) AS AvgRedZone
+                        FROM vStudentPredictionData v
+                        JOIN ExitData e 
+                            ON v.StudentID = e.StudentID
+                        GROUP BY ExitReason;";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     SqlDataReader reader = cmd.ExecuteReader();
                     string result = "Database Info:\n";
@@ -467,6 +505,11 @@ namespace BridgeVueApp
                 csv.WriteRecords(generatedBehavior);
             }
 
+            using (var writer = new StreamWriter(Path.Combine(folderPath, "ExitData.csv")))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csv.WriteRecords(generatedExitData);
+            }
             lblStatus.Text = $"Synthetic data saved to {folderPath}";
         }
 

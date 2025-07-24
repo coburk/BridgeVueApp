@@ -23,71 +23,71 @@ namespace BridgeVueApp
             [ColumnName(@"Age")]
             public float Age { get; set; }
 
-            [LoadColumn(3)]
-            [ColumnName(@"Gender")]
-            public string Gender { get; set; }
-
             [LoadColumn(4)]
-            [ColumnName(@"Ethnicity")]
-            public string Ethnicity { get; set; }
+            [ColumnName(@"GenderNum")]
+            public float GenderNum { get; set; }
 
-            [LoadColumn(5)]
+            [LoadColumn(6)]
+            [ColumnName(@"EthnicityNum")]
+            public float EthnicityNum { get; set; }
+
+            [LoadColumn(7)]
             [ColumnName(@"SpecialEd")]
             public bool SpecialEd { get; set; }
 
-            [LoadColumn(6)]
+            [LoadColumn(8)]
             [ColumnName(@"IEP")]
             public bool IEP { get; set; }
 
-            [LoadColumn(7)]
-            [ColumnName(@"EntryReason")]
-            public string EntryReason { get; set; }
+            [LoadColumn(10)]
+            [ColumnName(@"EntryReasonNum")]
+            public float EntryReasonNum { get; set; }
 
-            [LoadColumn(8)]
+            [LoadColumn(11)]
             [ColumnName(@"PriorIncidents")]
             public float PriorIncidents { get; set; }
 
-            [LoadColumn(9)]
+            [LoadColumn(12)]
             [ColumnName(@"OfficeReferrals")]
             public float OfficeReferrals { get; set; }
 
-            [LoadColumn(10)]
+            [LoadColumn(13)]
             [ColumnName(@"Suspensions")]
             public float Suspensions { get; set; }
 
-            [LoadColumn(11)]
+            [LoadColumn(14)]
             [ColumnName(@"Expulsions")]
             public float Expulsions { get; set; }
 
-            [LoadColumn(12)]
-            [ColumnName(@"EntryAcademicLevel")]
-            public string EntryAcademicLevel { get; set; }
+            [LoadColumn(16)]
+            [ColumnName(@"EntryAcademicLevelNum")]
+            public float EntryAcademicLevelNum { get; set; }
 
-            [LoadColumn(13)]
-            [ColumnName(@"EntrySocialSkillsLevel")]
-            public string EntrySocialSkillsLevel { get; set; }
+            [LoadColumn(18)]
+            [ColumnName(@"EntrySocialSkillsLevelNum")]
+            public float EntrySocialSkillsLevelNum { get; set; }
 
-            [LoadColumn(14)]
+            [LoadColumn(19)]
             [ColumnName(@"AvgVerbalAggression")]
             public float AvgVerbalAggression { get; set; }
 
-            [LoadColumn(15)]
+            [LoadColumn(20)]
             [ColumnName(@"AvgPhysicalAggression")]
             public float AvgPhysicalAggression { get; set; }
 
-            [LoadColumn(16)]
+            [LoadColumn(21)]
             [ColumnName(@"AvgAcademicEngagement")]
             public float AvgAcademicEngagement { get; set; }
 
-            [LoadColumn(17)]
+            [LoadColumn(22)]
             [ColumnName(@"RedZonePct")]
             public float RedZonePct { get; set; }
 
-            [LoadColumn(18)]
+            [LoadColumn(23)]
             [ColumnName(@"ExitReason")]
             public string ExitReason { get; set; }
 
-            [LoadColumn(19)]
+            [LoadColumn(24)]
             [ColumnName(@"LengthOfStay")]
             public float LengthOfStay { get; set; }
 
@@ -107,11 +107,11 @@ namespace BridgeVueApp
             [ColumnName(@"Age")]
             public float Age { get; set; }
 
-            [ColumnName(@"Gender")]
-            public float[] Gender { get; set; }
+            [ColumnName(@"GenderNum")]
+            public float GenderNum { get; set; }
 
-            [ColumnName(@"Ethnicity")]
-            public float[] Ethnicity { get; set; }
+            [ColumnName(@"EthnicityNum")]
+            public float EthnicityNum { get; set; }
 
             [ColumnName(@"SpecialEd")]
             public float[] SpecialEd { get; set; }
@@ -119,8 +119,8 @@ namespace BridgeVueApp
             [ColumnName(@"IEP")]
             public float[] IEP { get; set; }
 
-            [ColumnName(@"EntryReason")]
-            public float[] EntryReason { get; set; }
+            [ColumnName(@"EntryReasonNum")]
+            public float EntryReasonNum { get; set; }
 
             [ColumnName(@"PriorIncidents")]
             public float PriorIncidents { get; set; }
@@ -134,11 +134,11 @@ namespace BridgeVueApp
             [ColumnName(@"Expulsions")]
             public float Expulsions { get; set; }
 
-            [ColumnName(@"EntryAcademicLevel")]
-            public float[] EntryAcademicLevel { get; set; }
+            [ColumnName(@"EntryAcademicLevelNum")]
+            public float EntryAcademicLevelNum { get; set; }
 
-            [ColumnName(@"EntrySocialSkillsLevel")]
-            public float[] EntrySocialSkillsLevel { get; set; }
+            [ColumnName(@"EntrySocialSkillsLevelNum")]
+            public float EntrySocialSkillsLevelNum { get; set; }
 
             [ColumnName(@"AvgVerbalAggression")]
             public float AvgVerbalAggression { get; set; }

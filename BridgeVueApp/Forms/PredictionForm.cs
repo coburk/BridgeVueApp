@@ -26,23 +26,24 @@ namespace BridgeVueApp
         {
             var input = new ML_Class_Success.ModelInput()
             {
-                Grade = 3,
-                Age = 9,
-                Gender = "Male",
-                Ethnicity = "Hispanic",
+                Grade = 1F,
+                Age = 8F,
+                GenderNum = 0F,
+                EthnicityNum = 1F,
                 SpecialEd = true,
                 IEP = false,
-                EntryReason = "Aggression",
-                PriorIncidents = 4,
-                OfficeReferrals = 1,
-                Suspensions = 1,
-                Expulsions = 0,
-                EntryAcademicLevel = "Below Grade",
-                EntrySocialSkillsLevel = "Low",
-                AvgVerbalAggression = 0.8f,
-                AvgPhysicalAggression = 0.5f,
-                AvgAcademicEngagement = 3.5f,
-                RedZonePct = 0.25f
+                EntryReasonNum = 4F,
+                PriorIncidents = 0F,
+                OfficeReferrals = 0F,
+                Suspensions = 0F,
+                Expulsions = 0F,
+                EntryAcademicLevelNum = 3F,
+                EntrySocialSkillsLevelNum = 2F,
+                AvgVerbalAggression = 0F,
+                AvgPhysicalAggression = 0F,
+                AvgAcademicEngagement = 3F,
+                RedZonePct = 0.24632353F,
+                LengthOfStay = 62F,
             };
 
             var result = ML_Class_Success.Predict(input);
@@ -60,6 +61,29 @@ namespace BridgeVueApp
         }
 
 
+        // Helper methods for conversion
+        private int ConvertAcademicLevelToNum(string level)
+        {
+            return level switch
+            {
+                "Below Grade" => 0,
+                "At Grade" => 1,
+                "Above Grade" => 2,
+                _ => -1 // Unknown
+            };
+        }
+
+        private int ConvertSocialSkillsLevelToNum(string level)
+        {
+            return level switch
+            {
+                "Low" => 0,
+                "Medium" => 1,
+                "High" => 2,
+                _ => -1 // Unknown
+            };
+        }
+
         // Method to predict a random student from the database
         private void PredictRandomStudent()
         {
@@ -74,21 +98,24 @@ namespace BridgeVueApp
                 {
                     if (reader.Read())
                     {
+                        string entryAcademicLevel = reader.GetString(reader.GetOrdinal("EntryAcademicLevel"));
+                        string entrySocialSkillsLevel = reader.GetString(reader.GetOrdinal("EntrySocialSkillsLevel"));
+
                         var input = new ML_Class_Success.ModelInput()
                         {
                             Grade = reader.GetInt32(reader.GetOrdinal("Grade")),
                             Age = reader.GetInt32(reader.GetOrdinal("Age")),
-                            Gender = reader.GetString(reader.GetOrdinal("Gender")),
-                            Ethnicity = reader.GetString(reader.GetOrdinal("Ethnicity")),
+                            GenderNum = reader.GetInt32(reader.GetOrdinal("Gender")),
+                            EthnicityNum = reader.GetInt32(reader.GetOrdinal("Ethnicity")),
                             SpecialEd = reader.GetBoolean(reader.GetOrdinal("SpecialEd")),
                             IEP = reader.GetBoolean(reader.GetOrdinal("IEP")),
-                            EntryReason = reader.GetString(reader.GetOrdinal("EntryReason")),
+                            EntryReasonNum = reader.GetInt32(reader.GetOrdinal("EntryReason")),
                             PriorIncidents = reader.GetInt32(reader.GetOrdinal("PriorIncidents")),
                             OfficeReferrals = reader.GetInt32(reader.GetOrdinal("OfficeReferrals")),
                             Suspensions = reader.GetInt32(reader.GetOrdinal("Suspensions")),
                             Expulsions = reader.GetInt32(reader.GetOrdinal("Expulsions")),
-                            EntryAcademicLevel = reader.GetString(reader.GetOrdinal("EntryAcademicLevel")),
-                            EntrySocialSkillsLevel = reader.GetString(reader.GetOrdinal("EntrySocialSkillsLevel")),
+                            EntryAcademicLevelNum = ConvertAcademicLevelToNum(entryAcademicLevel),
+                            EntrySocialSkillsLevelNum = ConvertSocialSkillsLevelToNum(entrySocialSkillsLevel),
                             AvgVerbalAggression = Convert.ToSingle(reader.GetValue(reader.GetOrdinal("AvgVerbalAggression"))),
                             AvgPhysicalAggression = Convert.ToSingle(reader.GetValue(reader.GetOrdinal("AvgPhysicalAggression"))),
                             AvgAcademicEngagement = Convert.ToSingle(reader.GetValue(reader.GetOrdinal("AvgAcademicEngagement"))),
@@ -139,13 +166,13 @@ namespace BridgeVueApp
                         string[] leftValues = {
                             input.Grade.ToString(),
                             input.Age.ToString(),
-                            input.Gender,
-                            input.Ethnicity,
+                            input.GenderNum.ToString(),
+                            input.EthnicityNum.ToString(),
                             input.SpecialEd ? "Yes" : "No",
                             input.IEP ? "Yes" : "No",
-                            input.EntryReason,
-                            input.EntryAcademicLevel,
-                            input.EntrySocialSkillsLevel
+                            input.EntryReasonNum.ToString(),
+                            input.EntryAcademicLevelNum.ToString(),
+                            input.EntrySocialSkillsLevelNum.ToString()
                 };
 
                         string[] rightLabels = {
@@ -230,6 +257,44 @@ namespace BridgeVueApp
 
         }
 
+        // Manual What-If Prediction button click handler
+        private void btnManualPredict_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var input = new ML_Class_Success.ModelInput()
+                {
+                    Grade = Convert.ToInt32(cmbGrade.Text),
+                    Age = Convert.ToInt32(nudAge.Value),
+                    GenderNum = cmbGender.value,
+                    EthnicityNum = ConvertAcademicLevelToNum(cmbEthnicity.Text),
+                    SpecialEd = chkSpecialEd.Checked,
+                    IEP = chkIEP.Checked,
+                    EntryReasonNum = cmbEntryReasonNum.Text,
+                    PriorIncidents = Convert.ToInt32(nudPriorIncidents.Value),
+                    OfficeReferrals = Convert.ToInt32(nudOfficeReferrals.Value),
+                    Suspensions = Convert.ToInt32(nudSuspensions.Value),
+                    Expulsions = Convert.ToInt32(nudExpulsions.Value),
+                    EntryAcademicLevelNum = ConvertAcademicLevelToNum(cmbAcademicLevel.Text),
+                    EntrySocialSkillsLevelNum = ConvertSocialSkillsLevelToNum(cmbSocialSkills.Text),
+                    AvgVerbalAggression = (float)nudAvgVerbal.Value,
+                    AvgPhysicalAggression = (float)nudAvgPhysical.Value,
+                    AvgAcademicEngagement = (float)nudAvgEngagement.Value,
+                    RedZonePct = (float)(nudRedZonePct.Value / 100.0m),  // Convert from percent to decimal
+                };
+
+                var result = ML_Class_Success.Predict(input);
+
+                rtbManualPredictionOuput.Text = $"Predicted Outcome: {result.PredictedLabel}";
+                rtbManualPredictionOuput.ForeColor = result.PredictedLabel == "Returned Successfully" ? Color.Green : Color.Red;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error during prediction: {ex.Message}", "Prediction Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
         // Handle batch prediction button click
         private void btnBatchPredict_Click(object sender, EventArgs e)
         {
@@ -246,6 +311,9 @@ namespace BridgeVueApp
                 {
                     while (reader.Read())
                     {
+                        string entryAcademicLevel = reader.GetString(reader.GetOrdinal("EntryAcademicLevel"));
+                        string entrySocialSkillsLevel = reader.GetString(reader.GetOrdinal("EntrySocialSkillsLevel"));
+
                         var input = new ML_Class_Success.ModelInput()
                         {
                             Grade = reader.GetInt32(reader.GetOrdinal("Grade")),
@@ -254,13 +322,13 @@ namespace BridgeVueApp
                             Ethnicity = reader.GetString(reader.GetOrdinal("Ethnicity")),
                             SpecialEd = reader.GetBoolean(reader.GetOrdinal("SpecialEd")),
                             IEP = reader.GetBoolean(reader.GetOrdinal("IEP")),
-                            EntryReason = reader.GetString(reader.GetOrdinal("EntryReason")),
+                            EntryReasonNum = reader.GetString(reader.GetOrdinal("EntryReasonNum")),
                             PriorIncidents = reader.GetInt32(reader.GetOrdinal("PriorIncidents")),
                             OfficeReferrals = reader.GetInt32(reader.GetOrdinal("OfficeReferrals")),
                             Suspensions = reader.GetInt32(reader.GetOrdinal("Suspensions")),
                             Expulsions = reader.GetInt32(reader.GetOrdinal("Expulsions")),
-                            EntryAcademicLevel = reader.GetString(reader.GetOrdinal("EntryAcademicLevel")),
-                            EntrySocialSkillsLevel = reader.GetString(reader.GetOrdinal("EntrySocialSkillsLevel")),
+                            EntryAcademicLevelNum = ConvertAcademicLevelToNum(entryAcademicLevel),
+                            EntrySocialSkillsLevelNum = ConvertSocialSkillsLevelToNum(entrySocialSkillsLevel),
                             AvgVerbalAggression = Convert.ToSingle(reader.GetValue(reader.GetOrdinal("AvgVerbalAggression"))),
                             AvgPhysicalAggression = Convert.ToSingle(reader.GetValue(reader.GetOrdinal("AvgPhysicalAggression"))),
                             AvgAcademicEngagement = Convert.ToSingle(reader.GetValue(reader.GetOrdinal("AvgAcademicEngagement"))),
@@ -310,10 +378,10 @@ namespace BridgeVueApp
         private void SetupBatchSummary()
         {
             lblBatchSummary.Text =
-                "The table below displays predicted outcomes for all current students in the BridgeVue program.\n\n" +
+                "The table below displays predicted outcomes for all current students in the BridgeVue program.\n" +
                 "• Predicted Outcome: The model’s suggested reintegration outcome.\n" +
                 "• Confidence: How certain the model is in its prediction.\n" +
-                "• Behavior Metrics: Avg verbal/physical aggression, academic engagement, and red zone time.\n\n" +
+                "• Behavior Metrics: Avg verbal/physical aggression, academic engagement, and red zone time.\n" +
                 "These predictions are supportive tools for staff and should be combined with professional judgment.";
 
             dgvBatchPrediction.RowPrePaint += DgvBatchPrediction_RowPrePaint;
@@ -327,6 +395,35 @@ namespace BridgeVueApp
         public int StudentID { get; set; }
         public string PredictedOutcome { get; set; }
         public string Confidence { get; set; }
+        public float AvgVerbalAggression { get; set; }
+        public float AvgPhysicalAggression { get; set; }
+        public float AvgAcademicEngagement { get; set; }
+        public float RedZonePct { get; set; }
+    }
+
+    public class ModelInput
+    {
+        public int Grade { get; set; }
+        public int Age { get; set; }
+        public string Gender { get; set; }
+        public string Ethnicity { get; set; }
+        public bool SpecialEd { get; set; }
+        public bool IEP { get; set; }
+        public string EntryReason { get; set; }
+        public int PriorIncidents { get; set; }
+        public int OfficeReferrals { get; set; }
+        public int Suspensions { get; set; }
+        public int Expulsions { get; set; }
+
+
+        // UI-friendly versions (not used by model)
+        public string EntryAcademicLevel { get; set; }
+        public string EntrySocialSkillsLevel { get; set; }
+
+
+        // Model-used numeric versions
+        public float EntryAcademicLevelNum { get; set; }
+        public float EntrySocialSkillsLevelNum { get; set; }
         public float AvgVerbalAggression { get; set; }
         public float AvgPhysicalAggression { get; set; }
         public float AvgAcademicEngagement { get; set; }

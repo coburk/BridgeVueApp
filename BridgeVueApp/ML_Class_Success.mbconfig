@@ -30,16 +30,32 @@
       },
       {
         "ColumnName": "Gender",
-        "ColumnPurpose": "Feature",
+        "ColumnPurpose": "Ignore",
         "ColumnDataFormat": "String",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
       },
       {
-        "ColumnName": "Ethnicity",
+        "ColumnName": "GenderNum",
         "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "Ethnicity",
+        "ColumnPurpose": "Ignore",
         "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EthnicityNum",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
@@ -62,8 +78,16 @@
       },
       {
         "ColumnName": "EntryReason",
-        "ColumnPurpose": "Feature",
+        "ColumnPurpose": "Ignore",
         "ColumnDataFormat": "String",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntryReasonNum",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
         "IsCategorical": false,
         "Type": "Column",
         "Version": 5
@@ -102,16 +126,32 @@
       },
       {
         "ColumnName": "EntryAcademicLevel",
-        "ColumnPurpose": "Feature",
+        "ColumnPurpose": "Ignore",
         "ColumnDataFormat": "String",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
       },
       {
-        "ColumnName": "EntrySocialSkillsLevel",
+        "ColumnName": "EntryAcademicLevelNum",
         "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntrySocialSkillsLevel",
+        "ColumnPurpose": "Ignore",
         "ColumnDataFormat": "String",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntrySocialSkillsLevelNum",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
@@ -166,7 +206,7 @@
       }
     ],
     "ConnectionString": "Data Source=localhost;Initial Catalog=BridgeVue;Integrated Security=True;Trust Server Certificate=True",
-    "CommandString": "SELECT CAST([Grade] as REAL), CAST([Age] as REAL), CAST([Gender] as NVARCHAR(MAX)), CAST([Ethnicity] as NVARCHAR(MAX)), [SpecialEd], [IEP], CAST([EntryReason] as NVARCHAR(MAX)), CAST([PriorIncidents] as REAL), CAST([OfficeReferrals] as REAL), CAST([Suspensions] as REAL), CAST([Expulsions] as REAL), CAST([EntryAcademicLevel] as NVARCHAR(MAX)), CAST([EntrySocialSkillsLevel] as NVARCHAR(MAX)), CAST([AvgVerbalAggression] as REAL), CAST([AvgPhysicalAggression] as REAL), CAST([AvgAcademicEngagement] as REAL), CAST([RedZonePct] as REAL), CAST([ExitReason] as NVARCHAR(MAX)), CAST([LengthOfStay] as REAL) FROM [dbo].[vStudentMLData]",
+    "CommandString": "SELECT CAST([Grade] as REAL), CAST([Age] as REAL), CAST([GenderNum] as REAL), CAST([EthnicityNum] as REAL), [SpecialEd], [IEP], CAST([EntryReasonNum] as REAL), CAST([PriorIncidents] as REAL), CAST([OfficeReferrals] as REAL), CAST([Suspensions] as REAL), CAST([Expulsions] as REAL), CAST([EntryAcademicLevelNum] as REAL), CAST([EntrySocialSkillsLevelNum] as REAL), CAST([AvgVerbalAggression] as REAL), CAST([AvgPhysicalAggression] as REAL), CAST([AvgAcademicEngagement] as REAL), CAST([RedZonePct] as REAL), CAST([ExitReason] as NVARCHAR(MAX)), CAST([LengthOfStay] as REAL) FROM [dbo].[vStudentMLData]",
     "DatabaseName": "BridgeVue",
     "SelectedTableDbo": "dbo",
     "TableName": "vStudentMLData"
@@ -182,37 +222,34 @@
       {
         "Version": 1,
         "Type": "Trial",
-        "TrainerName": "LbfgsLogisticRegressionOva",
-        "Score": 0.18749206349206349,
-        "RuntimeInSeconds": 1.356,
+        "TrainerName": "FastForestOva",
+        "Score": 0.19079824561403508,
+        "RuntimeInSeconds": 5.527,
         "Parameter": {
-          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e8 * e12",
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e5 * e11",
           "e0": {
             "OutputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
-              "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "IEP"
             ],
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
-              "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "IEP"
             ]
           },
           "e1": {
             "OutputColumnNames": [
               "Grade",
               "Age",
+              "GenderNum",
+              "EthnicityNum",
+              "EntryReasonNum",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNum",
+              "EntrySocialSkillsLevelNum",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
@@ -222,10 +259,15 @@
             "InputColumnNames": [
               "Grade",
               "Age",
+              "GenderNum",
+              "EthnicityNum",
+              "EntryReasonNum",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNum",
+              "EntrySocialSkillsLevelNum",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
@@ -233,45 +275,42 @@
               "LengthOfStay"
             ]
           },
-          "e12": {
+          "e11": {
             "OutputColumnName": "PredictedLabel",
             "InputColumnName": "PredictedLabel"
           },
           "e2": {
-            "InputColumnName": "EntryReason",
-            "OutputColumnName": "EntryReason"
-          },
-          "e3": {
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel",
               "Grade",
               "Age",
+              "GenderNum",
+              "EthnicityNum",
+              "EntryReasonNum",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNum",
+              "EntrySocialSkillsLevelNum",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
               "RedZonePct",
-              "LengthOfStay",
-              "EntryReason"
+              "LengthOfStay"
             ],
             "OutputColumnName": "Features"
           },
-          "e4": {
+          "e3": {
             "OutputColumnName": "ExitReason",
             "InputColumnName": "ExitReason",
             "AddKeyValueAnnotationsAsText": false
           },
-          "e8": {
-            "L1Regularization": 1.0,
-            "L2Regularization": 1.0,
+          "e5": {
+            "NumberOfTrees": 4,
+            "NumberOfLeaves": 4,
+            "FeatureFraction": 1.0,
             "LabelColumnName": "ExitReason",
             "FeatureColumnName": "Features"
           }
@@ -281,36 +320,33 @@
         "Version": 1,
         "Type": "Trial",
         "TrainerName": "FastTreeOva",
-        "Score": 0.1623174603174603,
-        "RuntimeInSeconds": 2.697,
+        "Score": 0.15979072681704259,
+        "RuntimeInSeconds": 3.921,
         "Parameter": {
-          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e5 * e12",
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e11",
           "e0": {
             "OutputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
-              "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "IEP"
             ],
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
-              "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "IEP"
             ]
           },
           "e1": {
             "OutputColumnNames": [
               "Grade",
               "Age",
+              "GenderNum",
+              "EthnicityNum",
+              "EntryReasonNum",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNum",
+              "EntrySocialSkillsLevelNum",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
@@ -320,10 +356,15 @@
             "InputColumnNames": [
               "Grade",
               "Age",
+              "GenderNum",
+              "EthnicityNum",
+              "EntryReasonNum",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNum",
+              "EntrySocialSkillsLevelNum",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
@@ -331,43 +372,39 @@
               "LengthOfStay"
             ]
           },
-          "e12": {
+          "e11": {
             "OutputColumnName": "PredictedLabel",
             "InputColumnName": "PredictedLabel"
           },
           "e2": {
-            "InputColumnName": "EntryReason",
-            "OutputColumnName": "EntryReason"
-          },
-          "e3": {
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel",
               "Grade",
               "Age",
+              "GenderNum",
+              "EthnicityNum",
+              "EntryReasonNum",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNum",
+              "EntrySocialSkillsLevelNum",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
               "RedZonePct",
-              "LengthOfStay",
-              "EntryReason"
+              "LengthOfStay"
             ],
             "OutputColumnName": "Features"
           },
-          "e4": {
+          "e3": {
             "OutputColumnName": "ExitReason",
             "InputColumnName": "ExitReason",
             "AddKeyValueAnnotationsAsText": false
           },
-          "e5": {
+          "e4": {
             "NumberOfLeaves": 4,
             "MinimumExampleCountPerLeaf": 20,
             "NumberOfTrees": 4,
@@ -384,19 +421,18 @@
     "Estimators": {
       "e0": "OneHotEncoding",
       "e1": "ReplaceMissingValues",
-      "e2": "FeaturizeText",
-      "e3": "Concatenate",
-      "e4": "MapValueToKey",
-      "e5": "FastTreeOva",
-      "e6": "FastForestOva",
-      "e7": "LightGbmMulti",
-      "e8": "LbfgsLogisticRegressionOva",
-      "e9": "LbfgsMaximumEntropyMulti",
-      "e10": "SdcaMaximumEntropyMulti",
-      "e11": "SdcaLogisticRegressionOva",
-      "e12": "MapKeyToValue"
+      "e2": "Concatenate",
+      "e3": "MapValueToKey",
+      "e4": "FastTreeOva",
+      "e5": "FastForestOva",
+      "e6": "LightGbmMulti",
+      "e7": "LbfgsLogisticRegressionOva",
+      "e8": "LbfgsMaximumEntropyMulti",
+      "e9": "SdcaMaximumEntropyMulti",
+      "e10": "SdcaLogisticRegressionOva",
+      "e11": "MapKeyToValue"
     },
-    "Schema": "e0 * e1 * e2 * e3 * e4 * (e5 + e6 + e7 + e8 + e9 + e10 + e11) * e12",
+    "Schema": "e0 * e1 * e2 * e3 * (e4 + e5 + e6 + e7 + e8 + e9 + e10) * e11",
     "MetricName": "MacroAccuracy",
     "ModelFilePath": "C:\\Users\\cburk\\source\\repos\\BridgeVueApp\\BridgeVueApp\\ML_Class_Success.mlnet"
   },
