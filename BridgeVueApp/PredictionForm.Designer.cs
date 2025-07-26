@@ -31,8 +31,7 @@
             btnRandomStudentPredict = new Button();
             tabControl1 = new TabControl();
             tabRandom = new TabPage();
-            lblStaticPrediction = new Label();
-            btnPredictStatic = new Button();
+            btnPredictSatic = new Button();
             rtbRandomPredictionOutput = new RichTextBox();
             tabManual = new TabPage();
             lblManualPredictionResult = new Label();
@@ -76,44 +75,36 @@
             // 
             // tabRandom
             // 
-            tabRandom.Controls.Add(lblStaticPrediction);
-            tabRandom.Controls.Add(btnPredictStatic);
+            tabRandom.Controls.Add(btnPredictSatic);
             tabRandom.Controls.Add(rtbRandomPredictionOutput);
             tabRandom.Controls.Add(btnRandomStudentPredict);
             tabRandom.Location = new Point(4, 24);
             tabRandom.Name = "tabRandom";
             tabRandom.Padding = new Padding(3);
-            tabRandom.Size = new Size(703, 398);
+            tabRandom.Size = new Size(703, 475);
             tabRandom.TabIndex = 0;
             tabRandom.Text = "Random Prediction";
             tabRandom.UseVisualStyleBackColor = true;
             // 
-            // lblStaticPrediction
+            // btnPredictSatic
             // 
-            lblStaticPrediction.AutoSize = true;
-            lblStaticPrediction.Location = new Point(366, 369);
-            lblStaticPrediction.Name = "lblStaticPrediction";
-            lblStaticPrediction.Size = new Size(119, 15);
-            lblStaticPrediction.TabIndex = 8;
-            lblStaticPrediction.Text = "Test Prediction Result";
-            // 
-            // btnPredictStatic
-            // 
-            btnPredictStatic.Location = new Point(157, 365);
-            btnPredictStatic.Name = "btnPredictStatic";
-            btnPredictStatic.Size = new Size(193, 23);
-            btnPredictStatic.TabIndex = 7;
-            btnPredictStatic.Text = "Test Prediction with Static Data";
-            btnPredictStatic.UseVisualStyleBackColor = true;
+            btnPredictSatic.Location = new Point(249, 410);
+            btnPredictSatic.Name = "btnPredictSatic";
+            btnPredictSatic.Size = new Size(175, 23);
+            btnPredictSatic.TabIndex = 7;
+            btnPredictSatic.Text = "Predict Static Student Data";
+            btnPredictSatic.TextAlign = ContentAlignment.TopCenter;
+            btnPredictSatic.UseVisualStyleBackColor = true;
+            btnPredictSatic.Click += btnPredictSatic_Click_1;
             // 
             // rtbRandomPredictionOutput
             // 
             rtbRandomPredictionOutput.Font = new Font("Consolas", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            rtbRandomPredictionOutput.Location = new Point(97, 61);
+            rtbRandomPredictionOutput.Location = new Point(83, 61);
             rtbRandomPredictionOutput.Name = "rtbRandomPredictionOutput";
             rtbRandomPredictionOutput.ReadOnly = true;
             rtbRandomPredictionOutput.ScrollBars = RichTextBoxScrollBars.Vertical;
-            rtbRandomPredictionOutput.Size = new Size(473, 292);
+            rtbRandomPredictionOutput.Size = new Size(509, 332);
             rtbRandomPredictionOutput.TabIndex = 6;
             rtbRandomPredictionOutput.Text = "";
             // 
@@ -127,7 +118,7 @@
             tabManual.Location = new Point(4, 24);
             tabManual.Name = "tabManual";
             tabManual.Padding = new Padding(3);
-            tabManual.Size = new Size(703, 398);
+            tabManual.Size = new Size(703, 475);
             tabManual.TabIndex = 1;
             tabManual.Text = "Manual What-if";
             tabManual.UseVisualStyleBackColor = true;
@@ -244,7 +235,6 @@
             Load += PredictionForm_Load;
             tabControl1.ResumeLayout(false);
             tabRandom.ResumeLayout(false);
-            tabRandom.PerformLayout();
             tabManual.ResumeLayout(false);
             tabManual.PerformLayout();
             tabBatch.ResumeLayout(false);
@@ -267,10 +257,9 @@
         private GroupBox gbxIntake;
         private Button btnBatchPredict;
         private RichTextBox rtbRandomPredictionOutput;
-        private Button btnPredictStatic;
-        private Label lblStaticPrediction;
         private GroupBox gbxBatchSummary;
         private Label lblBatchSummary;
         private DataGridView dgvBatchPrediction;
+        private Button btnPredictSatic;
     }
 }

@@ -636,7 +636,9 @@ namespace BridgeVueApp
             generatedBehavior.Clear();
             generatedExitData.Clear();
 
+            // Set the number of students to generate
             int numStudents = 50;
+
             progress?.Report($"Generating data for {numStudents} students...");
 
             for (int studentId = 1; studentId <= numStudents; studentId++)
@@ -902,6 +904,8 @@ namespace BridgeVueApp
 
 
         // Numeric conversion methods for categorical data
+
+        // Get numeric gender for intake data
         private int GetGenderNumeric(string gender)
         {
             return gender switch
@@ -912,6 +916,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric ethnicity for intake data
         private int GetEthnicityNumeric(string ethnicity)
         {
             return ethnicity switch
@@ -925,6 +930,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric entry reason for intake data
         private int GetEntryReasonNumeric(string reason)
         {
             return reason switch
@@ -939,6 +945,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric academic level
         private int GetAcademicLevelNumeric(string level)
         {
             return level switch
@@ -950,6 +957,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric social skills level
         private int GetSocialSkillsLevelNumeric(string level)
         {
             return level switch
@@ -961,6 +969,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric zone for daily behavior
         private int GetZoneNumeric(string zone)
         {
             return zone switch
@@ -973,6 +982,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric emotion for weekly emotion pictogram
         private int GetEmotionNumeric(string emotion)
         {
             return emotion switch
@@ -987,19 +997,21 @@ namespace BridgeVueApp
             };
         }
 
+        // Get numeric exit reason for exit data
         private int GetExitReasonNumeric(string reason)
         {
             return reason switch
             {
-                "Returned Successfully" => 5,  // Best outcome
-                "ACC" => 4,                    // Positive transition
-                "Other" => 3,                  // Neutral
-                "ABS" => 2,                    // Negative
-                "Referred Out" => 1,           // Worst outcome
+                "Returned Successfully" => 5,
+                "ACC" => 4,
+                "Transferred" => 3,
+                "ABS" => 2,
+                "Referred Out" => 1,
                 _ => 0
             };
         }
 
+        // Get success indicator based on exit reason
         private int GetSuccessIndicator(string exitReason)
         {
             return exitReason switch
@@ -1010,6 +1022,7 @@ namespace BridgeVueApp
             };
         }
 
+        // Generate a normally distributed random number
         private double GenerateNormalRandom(Random rand, double mean, double stdDev)
         {
             // Box-Muller transform for normal distribution
@@ -1019,22 +1032,24 @@ namespace BridgeVueApp
             return Math.Max(0, Math.Min(1, mean + stdDev * randStdNormal));
         }
 
+        // Get a weighted random choice based on weights
         private string GetWeightedEntryReason(Random rand, double stressLevel, double emotionalReg)
         {
             var reasons = new[] { "Aggression", "Anxiety", "Trauma", "Withdrawn", "Disruptive", "Other" };
             var weights = new double[]
             {
-        stressLevel * 0.8 + (1 - emotionalReg) * 0.2, // Aggression
-        stressLevel * 0.6 + (1 - emotionalReg) * 0.4, // Anxiety  
-        stressLevel * 0.7, // Trauma
-        (1 - emotionalReg) * 0.5 + stressLevel * 0.3, // Withdrawn
-        stressLevel * 0.5 + (1 - emotionalReg) * 0.5, // Disruptive
-        0.1 // Other
+        stressLevel * 0.8 + (1 - emotionalReg) * 0.2,        // Aggression
+        stressLevel * 0.6 + (1 - emotionalReg) * 0.4,        // Anxiety  
+        stressLevel * 0.7,                                   // Trauma
+        (1 - emotionalReg) * 0.5 + stressLevel * 0.3,        // Withdrawn
+        stressLevel * 0.5 + (1 - emotionalReg) * 0.5,        // Disruptive
+        0.1                                                  // Other
             };
 
             return GetWeightedChoice(rand, reasons, weights);
         }
 
+        // Get Zone based on aggression risk and engagement level
         private string GetZoneBasedOnBehavior(double aggressionRisk, double engagementLevel, Random rand)
         {
             if (aggressionRisk > 0.7) return "Red";
@@ -1043,66 +1058,87 @@ namespace BridgeVueApp
             return "Blue";
         }
 
+        // Get emotion based on aggression risk and engagement level
         private string GetEmotionBasedOnBehavior(double aggressionRisk, double engagementLevel, Random rand)
         {
             var emotions = new[] { "Happy", "Sad", "Angry", "Lonely", "Nervous", "Excited" };
             var weights = new double[]
             {
-        engagementLevel * 0.8, // Happy
-        (1 - engagementLevel) * 0.6, // Sad
-        aggressionRisk * 0.9, // Angry
-        (1 - engagementLevel) * 0.4, // Lonely
-        aggressionRisk * 0.5, // Nervous
-        engagementLevel * 0.6 // Excited
+        engagementLevel * 0.8,          // Happy
+        (1 - engagementLevel) * 0.6,    // Sad
+        aggressionRisk * 0.9,           // Angry
+        (1 - engagementLevel) * 0.4,    // Lonely
+        aggressionRisk * 0.5,           // Nervous
+        engagementLevel * 0.6           // Excited
             };
 
             return GetWeightedChoice(rand, emotions, weights);
         }
 
+        // Predict outcome based on multiple factors
         private string PredictOutcome(double avgAggression, double avgEngagement, double redZonePercent,
-                                    double improvementScore, double riskFactor, double programEffectiveness,
-                                    double familySupport, int behaviorDays, Random rand)
+                            double improvementScore, double riskFactor, double programEffectiveness,
+                            double familySupport, int behaviorDays, Random rand)
         {
             // Calculate success probability based on multiple factors
             double successScore = 0;
 
             // Behavioral factors (40% weight)
-            successScore += (5 - avgEngagement) / 5 * 0.2; // Higher engagement = better
-            successScore += Math.Max(0, 1 - avgAggression) * 0.1; // Lower aggression = better  
-            successScore += Math.Max(0, 1 - redZonePercent) * 0.1; // Fewer red zone days = better
+            successScore += (5 - avgEngagement) / 5 * 0.2;
+            successScore += Math.Max(0, 1 - avgAggression) * 0.1;
+            successScore += Math.Max(0, 1 - redZonePercent) * 0.1;
 
             // Improvement factors (30% weight)
-            successScore += Math.Max(0, improvementScore) * 0.2; // Positive improvement = better
-            successScore += programEffectiveness * 0.1; // Program working = better
+            successScore += Math.Max(0, improvementScore) * 0.2;
+            successScore += programEffectiveness * 0.1;
 
             // Support factors (20% weight)
-            successScore += familySupport * 0.15; // Family support = better
-            successScore += Math.Max(0, 1 - riskFactor) * 0.05; // Lower initial risk = better
+            successScore += familySupport * 0.15;
+            successScore += Math.Max(0, 1 - riskFactor) * 0.05;
 
-            // Time factors (10% weight)  
-            successScore += Math.Min(1, behaviorDays / 60.0) * 0.1; // Longer stay can indicate stability
+            // Time factors (10% weight)
+            successScore += Math.Min(1, behaviorDays / 60.0) * 0.1;
 
             // Add some randomness
             successScore += GenerateNormalRandom(rand, 0, 0.1);
+            successScore = Math.Max(0, Math.Min(1, successScore)); // Clamp to 0-1
 
-            // Determine outcome based on success score
-            if (successScore > 0.7) return "Returned Successfully";
-            if (successScore < 0.3) return "Referred Out";
-            if (successScore < 0.4 && rand.NextDouble() < 0.2) return "ABS";
-            if (rand.NextDouble() < 0.05) return "ACC";
+            // Attempted Realistic Balanced Distribution
+            double randomValue = rand.NextDouble();
 
-            return rand.NextDouble() < successScore ? "Returned Successfully" : "Referred Out";
+            // Determine outcome based on success score and randomness
+            if (successScore > 0.7)
+                return "Returned Successfully";                                 // ~35%
+
+            // High success scores - more likely to return successfully
+            if (successScore > 0.55)
+                return randomValue < 0.8 ? "Returned Successfully" : "ACC";     // Mix success + some ACC
+
+            // Moderate success scores - balanced outcomes
+            if (successScore > 0.4)
+                return randomValue < 0.3 ? "ACC" :
+                       randomValue < 0.6 ? "Transferred" : "Referred Out";      // Balanced middle
+
+            // Low to moderate success scores - more referrals and absconding
+            if (successScore > 0.3)
+                return randomValue < 0.2 ? "Transferred" :
+                       randomValue < 0.7 ? "Referred Out" : "ABS";              // More ABS opportunity
+
+            // Worst case scenarios - high risk of referral or absconding
+            return randomValue < 0.5 ? "Referred Out" : "ABS";                  // 50/50 split for worst cases
         }
 
+
+        // Calculate length of stay based on outcome, improvement score, risk factor, and randomness
         private int CalculateLengthOfStay(string outcome, double improvementScore, double riskFactor, Random rand)
         {
             int baseDays = outcome switch
             {
-                "Returned Successfully" => 75, // Successful completions take longer
-                "Referred Out" => 45, // Unsuccessful shorter
-                "ABS" => 30, // Absconded early
-                "ACC" => 90, // Acute care longer
-                _ => 60
+                "Returned Successfully" => 75,      // Successful completions take longer
+                "Referred Out" => 45,               // Unsuccessful shorter
+                "ABS" => 30,                        // Absconded early
+                "ACC" => 90,                        // Acute care longer
+                _ => 60                             // Default case for other outcomes     
             };
 
             // Adjust based on factors
@@ -1110,6 +1146,8 @@ namespace BridgeVueApp
             return Math.Max(14, baseDays + (int)adjustment + rand.Next(-15, 15));
         }
 
+
+        // Calculate exit academic levels based on entry levels and improvement scores
         private string CalculateExitAcademicLevel(string entryLevel, double improvementScore, Random rand)
         {
             if (improvementScore > 0.3 && rand.NextDouble() < 0.4)
@@ -1124,6 +1162,7 @@ namespace BridgeVueApp
             return entryLevel; // Most students don't change academic level significantly
         }
 
+        // Calculate exit social skills level based on entry level and improvement scores
         private string CalculateExitSocialSkillsLevel(string entryLevel, double improvementScore, Random rand)
         {
             if (improvementScore > 0.2 && rand.NextDouble() < 0.6)
@@ -1138,6 +1177,7 @@ namespace BridgeVueApp
             return entryLevel;
         }
 
+        // Get a weighted choice based on provided weights
         private string GetWeightedChoice(Random rand, string[] choices, double[] weights)
         {
             double totalWeight = weights.Sum();
