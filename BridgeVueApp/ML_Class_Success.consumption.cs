@@ -24,12 +24,12 @@ namespace BridgeVueApp
             public float Age { get; set; }
 
             [LoadColumn(3)]
-            [ColumnName(@"Gender")]
-            public string Gender { get; set; }
+            [ColumnName(@"GenderNumeric")]
+            public float GenderNumeric { get; set; }
 
             [LoadColumn(4)]
-            [ColumnName(@"Ethnicity")]
-            public string Ethnicity { get; set; }
+            [ColumnName(@"EthnicityNumeric")]
+            public float EthnicityNumeric { get; set; }
 
             [LoadColumn(5)]
             [ColumnName(@"SpecialEd")]
@@ -40,8 +40,8 @@ namespace BridgeVueApp
             public bool IEP { get; set; }
 
             [LoadColumn(7)]
-            [ColumnName(@"EntryReason")]
-            public string EntryReason { get; set; }
+            [ColumnName(@"EntryReasonNumeric")]
+            public float EntryReasonNumeric { get; set; }
 
             [LoadColumn(8)]
             [ColumnName(@"PriorIncidents")]
@@ -60,36 +60,108 @@ namespace BridgeVueApp
             public float Expulsions { get; set; }
 
             [LoadColumn(12)]
-            [ColumnName(@"EntryAcademicLevel")]
-            public string EntryAcademicLevel { get; set; }
+            [ColumnName(@"EntryAcademicLevelNumeric")]
+            public float EntryAcademicLevelNumeric { get; set; }
 
             [LoadColumn(13)]
-            [ColumnName(@"EntrySocialSkillsLevel")]
-            public string EntrySocialSkillsLevel { get; set; }
+            [ColumnName(@"CheckInOut")]
+            public bool CheckInOut { get; set; }
 
             [LoadColumn(14)]
+            [ColumnName(@"StructuredRecess")]
+            public bool StructuredRecess { get; set; }
+
+            [LoadColumn(15)]
+            [ColumnName(@"StructuredBreaks")]
+            public bool StructuredBreaks { get; set; }
+
+            [LoadColumn(16)]
+            [ColumnName(@"SmallGroups")]
+            public float SmallGroups { get; set; }
+
+            [LoadColumn(17)]
+            [ColumnName(@"SocialWorkerVisits")]
+            public float SocialWorkerVisits { get; set; }
+
+            [LoadColumn(18)]
+            [ColumnName(@"PsychologistVisits")]
+            public float PsychologistVisits { get; set; }
+
+            [LoadColumn(19)]
+            [ColumnName(@"EntrySocialSkillsLevelNumeric")]
+            public float EntrySocialSkillsLevelNumeric { get; set; }
+
+            [LoadColumn(20)]
+            [ColumnName(@"RiskScore")]
+            public float RiskScore { get; set; }
+
+            [LoadColumn(21)]
+            [ColumnName(@"StudentStressLevelNormalized")]
+            public float StudentStressLevelNormalized { get; set; }
+
+            [LoadColumn(22)]
+            [ColumnName(@"FamilySupportNormalized")]
+            public float FamilySupportNormalized { get; set; }
+
+            [LoadColumn(23)]
+            [ColumnName(@"AcademicAbilityNormalized")]
+            public float AcademicAbilityNormalized { get; set; }
+
+            [LoadColumn(24)]
+            [ColumnName(@"EmotionalRegulationNormalized")]
+            public float EmotionalRegulationNormalized { get; set; }
+
+            [LoadColumn(25)]
             [ColumnName(@"AvgVerbalAggression")]
             public float AvgVerbalAggression { get; set; }
 
-            [LoadColumn(15)]
+            [LoadColumn(26)]
             [ColumnName(@"AvgPhysicalAggression")]
             public float AvgPhysicalAggression { get; set; }
 
-            [LoadColumn(16)]
+            [LoadColumn(27)]
             [ColumnName(@"AvgAcademicEngagement")]
             public float AvgAcademicEngagement { get; set; }
 
-            [LoadColumn(17)]
+            [LoadColumn(28)]
+            [ColumnName(@"AvgSocialInteractions")]
+            public float AvgSocialInteractions { get; set; }
+
+            [LoadColumn(29)]
+            [ColumnName(@"AvgEmotionalRegulation")]
+            public float AvgEmotionalRegulation { get; set; }
+
+            [LoadColumn(30)]
+            [ColumnName(@"AvgAggressionRisk")]
+            public float AvgAggressionRisk { get; set; }
+
+            [LoadColumn(31)]
+            [ColumnName(@"AvgEngagementLevel")]
+            public float AvgEngagementLevel { get; set; }
+
+            [LoadColumn(32)]
             [ColumnName(@"RedZonePct")]
             public float RedZonePct { get; set; }
 
-            [LoadColumn(18)]
-            [ColumnName(@"ExitReason")]
-            public string ExitReason { get; set; }
+            [LoadColumn(33)]
+            [ColumnName(@"YellowZonePct")]
+            public float YellowZonePct { get; set; }
 
-            [LoadColumn(19)]
-            [ColumnName(@"LengthOfStay")]
-            public float LengthOfStay { get; set; }
+            [LoadColumn(34)]
+            [ColumnName(@"BlueZonePct")]
+            public float BlueZonePct { get; set; }
+
+            [LoadColumn(35)]
+            [ColumnName(@"GreenZonePct")]
+            public float GreenZonePct { get; set; }
+
+            [LoadColumn(36)]
+            [ColumnName(@"BehaviorDays")]
+            public float BehaviorDays { get; set; }
+
+            [LoadColumn(37)]
+            [ColumnName(@"ExitReasonNumeric")]
+            public float ExitReasonNumeric { get; set; }
 
         }
 
@@ -107,11 +179,11 @@ namespace BridgeVueApp
             [ColumnName(@"Age")]
             public float Age { get; set; }
 
-            [ColumnName(@"Gender")]
-            public float[] Gender { get; set; }
+            [ColumnName(@"GenderNumeric")]
+            public float GenderNumeric { get; set; }
 
-            [ColumnName(@"Ethnicity")]
-            public float[] Ethnicity { get; set; }
+            [ColumnName(@"EthnicityNumeric")]
+            public float EthnicityNumeric { get; set; }
 
             [ColumnName(@"SpecialEd")]
             public float[] SpecialEd { get; set; }
@@ -119,8 +191,8 @@ namespace BridgeVueApp
             [ColumnName(@"IEP")]
             public float[] IEP { get; set; }
 
-            [ColumnName(@"EntryReason")]
-            public float[] EntryReason { get; set; }
+            [ColumnName(@"EntryReasonNumeric")]
+            public float EntryReasonNumeric { get; set; }
 
             [ColumnName(@"PriorIncidents")]
             public float PriorIncidents { get; set; }
@@ -134,11 +206,44 @@ namespace BridgeVueApp
             [ColumnName(@"Expulsions")]
             public float Expulsions { get; set; }
 
-            [ColumnName(@"EntryAcademicLevel")]
-            public float[] EntryAcademicLevel { get; set; }
+            [ColumnName(@"EntryAcademicLevelNumeric")]
+            public float EntryAcademicLevelNumeric { get; set; }
 
-            [ColumnName(@"EntrySocialSkillsLevel")]
-            public float[] EntrySocialSkillsLevel { get; set; }
+            [ColumnName(@"CheckInOut")]
+            public float[] CheckInOut { get; set; }
+
+            [ColumnName(@"StructuredRecess")]
+            public float[] StructuredRecess { get; set; }
+
+            [ColumnName(@"StructuredBreaks")]
+            public float[] StructuredBreaks { get; set; }
+
+            [ColumnName(@"SmallGroups")]
+            public float SmallGroups { get; set; }
+
+            [ColumnName(@"SocialWorkerVisits")]
+            public float SocialWorkerVisits { get; set; }
+
+            [ColumnName(@"PsychologistVisits")]
+            public float PsychologistVisits { get; set; }
+
+            [ColumnName(@"EntrySocialSkillsLevelNumeric")]
+            public float EntrySocialSkillsLevelNumeric { get; set; }
+
+            [ColumnName(@"RiskScore")]
+            public float RiskScore { get; set; }
+
+            [ColumnName(@"StudentStressLevelNormalized")]
+            public float StudentStressLevelNormalized { get; set; }
+
+            [ColumnName(@"FamilySupportNormalized")]
+            public float FamilySupportNormalized { get; set; }
+
+            [ColumnName(@"AcademicAbilityNormalized")]
+            public float AcademicAbilityNormalized { get; set; }
+
+            [ColumnName(@"EmotionalRegulationNormalized")]
+            public float EmotionalRegulationNormalized { get; set; }
 
             [ColumnName(@"AvgVerbalAggression")]
             public float AvgVerbalAggression { get; set; }
@@ -149,20 +254,41 @@ namespace BridgeVueApp
             [ColumnName(@"AvgAcademicEngagement")]
             public float AvgAcademicEngagement { get; set; }
 
+            [ColumnName(@"AvgSocialInteractions")]
+            public float AvgSocialInteractions { get; set; }
+
+            [ColumnName(@"AvgEmotionalRegulation")]
+            public float AvgEmotionalRegulation { get; set; }
+
+            [ColumnName(@"AvgAggressionRisk")]
+            public float AvgAggressionRisk { get; set; }
+
+            [ColumnName(@"AvgEngagementLevel")]
+            public float AvgEngagementLevel { get; set; }
+
             [ColumnName(@"RedZonePct")]
             public float RedZonePct { get; set; }
 
-            [ColumnName(@"ExitReason")]
-            public uint ExitReason { get; set; }
+            [ColumnName(@"YellowZonePct")]
+            public float YellowZonePct { get; set; }
 
-            [ColumnName(@"LengthOfStay")]
-            public float LengthOfStay { get; set; }
+            [ColumnName(@"BlueZonePct")]
+            public float BlueZonePct { get; set; }
+
+            [ColumnName(@"GreenZonePct")]
+            public float GreenZonePct { get; set; }
+
+            [ColumnName(@"BehaviorDays")]
+            public float BehaviorDays { get; set; }
+
+            [ColumnName(@"ExitReasonNumeric")]
+            public uint ExitReasonNumeric { get; set; }
 
             [ColumnName(@"Features")]
             public float[] Features { get; set; }
 
             [ColumnName(@"PredictedLabel")]
-            public string PredictedLabel { get; set; }
+            public float PredictedLabel { get; set; }
 
             [ColumnName(@"Score")]
             public float[] Score { get; set; }
@@ -227,14 +353,14 @@ namespace BridgeVueApp
         {
             var schema = PredictEngine.Value.OutputSchema;
 
-            var labelColumn = schema.GetColumnOrNull("ExitReason");
+            var labelColumn = schema.GetColumnOrNull("ExitReasonNumeric");
             if (labelColumn == null)
             {
-                throw new Exception("ExitReason column not found. Make sure the name searched for matches the name in the schema.");
+                throw new Exception("ExitReasonNumeric column not found. Make sure the name searched for matches the name in the schema.");
             }
 
             // Key values contains an ordered array of the possible labels. This allows us to map the results to the correct label value.
-            var keyNames = new VBuffer<ReadOnlyMemory<char>>();
+            var keyNames = new VBuffer<float>();
             labelColumn.Value.GetKeyValues(ref keyNames);
             return keyNames.DenseValues().Select(x => x.ToString());
         }

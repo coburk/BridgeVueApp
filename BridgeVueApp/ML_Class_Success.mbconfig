@@ -29,17 +29,17 @@
         "Version": 5
       },
       {
-        "ColumnName": "Gender",
+        "ColumnName": "GenderNumeric",
         "ColumnPurpose": "Feature",
-        "ColumnDataFormat": "String",
+        "ColumnDataFormat": "Single",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
       },
       {
-        "ColumnName": "Ethnicity",
+        "ColumnName": "EthnicityNumeric",
         "ColumnPurpose": "Feature",
-        "ColumnDataFormat": "String",
+        "ColumnDataFormat": "Single",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
@@ -61,9 +61,9 @@
         "Version": 5
       },
       {
-        "ColumnName": "EntryReason",
+        "ColumnName": "EntryReasonNumeric",
         "ColumnPurpose": "Feature",
-        "ColumnDataFormat": "String",
+        "ColumnDataFormat": "Single",
         "IsCategorical": false,
         "Type": "Column",
         "Version": 5
@@ -72,7 +72,7 @@
         "ColumnName": "PriorIncidents",
         "ColumnPurpose": "Feature",
         "ColumnDataFormat": "Single",
-        "IsCategorical": true,
+        "IsCategorical": false,
         "Type": "Column",
         "Version": 5
       },
@@ -101,18 +101,106 @@
         "Version": 5
       },
       {
-        "ColumnName": "EntryAcademicLevel",
+        "ColumnName": "EntryAcademicLevelNumeric",
         "ColumnPurpose": "Feature",
-        "ColumnDataFormat": "String",
+        "ColumnDataFormat": "Single",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
       },
       {
-        "ColumnName": "EntrySocialSkillsLevel",
+        "ColumnName": "CheckInOut",
         "ColumnPurpose": "Feature",
-        "ColumnDataFormat": "String",
+        "ColumnDataFormat": "Boolean",
         "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "StructuredRecess",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Boolean",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "StructuredBreaks",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Boolean",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "SmallGroups",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "SocialWorkerVisits",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "PsychologistVisits",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EntrySocialSkillsLevelNumeric",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "RiskScore",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "StudentStressLevelNormalized",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "FamilySupportNormalized",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AcademicAbilityNormalized",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "EmotionalRegulationNormalized",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
         "Type": "Column",
         "Version": 5
       },
@@ -141,6 +229,38 @@
         "Version": 5
       },
       {
+        "ColumnName": "AvgSocialInteractions",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AvgEmotionalRegulation",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AvgAggressionRisk",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AvgEngagementLevel",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
         "ColumnName": "RedZonePct",
         "ColumnPurpose": "Feature",
         "ColumnDataFormat": "Single",
@@ -149,24 +269,112 @@
         "Version": 5
       },
       {
-        "ColumnName": "ExitReason",
+        "ColumnName": "YellowZonePct",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "BlueZonePct",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "GreenZonePct",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "BehaviorDays",
+        "ColumnPurpose": "Feature",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "ExitReasonNumeric",
         "ColumnPurpose": "Label",
-        "ColumnDataFormat": "String",
+        "ColumnDataFormat": "Single",
         "IsCategorical": true,
         "Type": "Column",
         "Version": 5
       },
       {
         "ColumnName": "LengthOfStay",
-        "ColumnPurpose": "Feature",
+        "ColumnPurpose": "Ignore",
         "ColumnDataFormat": "Single",
         "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "ExitAcademicLevelNumeric",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "ExitSocialSkillsLevelNumeric",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "AcademicImprovement",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "SocialSkillsImprovement",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": true,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "OverallImprovementScore",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "ProgramEffectivenessScore",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Single",
+        "IsCategorical": false,
+        "Type": "Column",
+        "Version": 5
+      },
+      {
+        "ColumnName": "SuccessIndicator",
+        "ColumnPurpose": "Ignore",
+        "ColumnDataFormat": "Boolean",
+        "IsCategorical": true,
         "Type": "Column",
         "Version": 5
       }
     ],
     "ConnectionString": "Data Source=localhost;Initial Catalog=BridgeVue;Integrated Security=True;Trust Server Certificate=True",
-    "CommandString": "SELECT CAST([Grade] as REAL), CAST([Age] as REAL), CAST([Gender] as NVARCHAR(MAX)), CAST([Ethnicity] as NVARCHAR(MAX)), [SpecialEd], [IEP], CAST([EntryReason] as NVARCHAR(MAX)), CAST([PriorIncidents] as REAL), CAST([OfficeReferrals] as REAL), CAST([Suspensions] as REAL), CAST([Expulsions] as REAL), CAST([EntryAcademicLevel] as NVARCHAR(MAX)), CAST([EntrySocialSkillsLevel] as NVARCHAR(MAX)), CAST([AvgVerbalAggression] as REAL), CAST([AvgPhysicalAggression] as REAL), CAST([AvgAcademicEngagement] as REAL), CAST([RedZonePct] as REAL), CAST([ExitReason] as NVARCHAR(MAX)), CAST([LengthOfStay] as REAL) FROM [dbo].[vStudentMLData]",
+    "CommandString": "SELECT CAST([Grade] as REAL), CAST([Age] as REAL), CAST([GenderNumeric] as REAL), CAST([EthnicityNumeric] as REAL), [SpecialEd], [IEP], CAST([EntryReasonNumeric] as REAL), CAST([PriorIncidents] as REAL), CAST([OfficeReferrals] as REAL), CAST([Suspensions] as REAL), CAST([Expulsions] as REAL), CAST([EntryAcademicLevelNumeric] as REAL), [CheckInOut], [StructuredRecess], [StructuredBreaks], CAST([SmallGroups] as REAL), CAST([SocialWorkerVisits] as REAL), CAST([PsychologistVisits] as REAL), CAST([EntrySocialSkillsLevelNumeric] as REAL), CAST([RiskScore] as REAL), CAST([StudentStressLevelNormalized] as REAL), CAST([FamilySupportNormalized] as REAL), CAST([AcademicAbilityNormalized] as REAL), CAST([EmotionalRegulationNormalized] as REAL), CAST([AvgVerbalAggression] as REAL), CAST([AvgPhysicalAggression] as REAL), CAST([AvgAcademicEngagement] as REAL), CAST([AvgSocialInteractions] as REAL), CAST([AvgEmotionalRegulation] as REAL), CAST([AvgAggressionRisk] as REAL), CAST([AvgEngagementLevel] as REAL), CAST([RedZonePct] as REAL), CAST([YellowZonePct] as REAL), CAST([BlueZonePct] as REAL), CAST([GreenZonePct] as REAL), CAST([BehaviorDays] as REAL), CAST([ExitReasonNumeric] as REAL) FROM [dbo].[vStudentMLData]",
     "DatabaseName": "BridgeVue",
     "SelectedTableDbo": "dbo",
     "TableName": "vStudentMLData"
@@ -183,96 +391,148 @@
         "Version": 1,
         "Type": "Trial",
         "TrainerName": "LbfgsLogisticRegressionOva",
-        "Score": 0.18749206349206349,
-        "RuntimeInSeconds": 1.356,
+        "Score": 0.25997549019607846,
+        "RuntimeInSeconds": 2.089,
         "Parameter": {
-          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e8 * e12",
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e7 * e11",
           "e0": {
             "OutputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks"
             ],
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks"
             ]
           },
           "e1": {
             "OutputColumnNames": [
               "Grade",
               "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
               "RedZonePct",
-              "LengthOfStay"
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
             ],
             "InputColumnNames": [
               "Grade",
               "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
               "RedZonePct",
-              "LengthOfStay"
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
             ]
           },
-          "e12": {
+          "e11": {
             "OutputColumnName": "PredictedLabel",
             "InputColumnName": "PredictedLabel"
           },
           "e2": {
-            "InputColumnName": "EntryReason",
-            "OutputColumnName": "EntryReason"
-          },
-          "e3": {
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel",
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks",
               "Grade",
               "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
               "RedZonePct",
-              "LengthOfStay",
-              "EntryReason"
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
             ],
             "OutputColumnName": "Features"
           },
-          "e4": {
-            "OutputColumnName": "ExitReason",
-            "InputColumnName": "ExitReason",
+          "e3": {
+            "OutputColumnName": "ExitReasonNumeric",
+            "InputColumnName": "ExitReasonNumeric",
             "AddKeyValueAnnotationsAsText": false
           },
-          "e8": {
+          "e7": {
             "L1Regularization": 1.0,
             "L2Regularization": 1.0,
-            "LabelColumnName": "ExitReason",
+            "LabelColumnName": "ExitReasonNumeric",
             "FeatureColumnName": "Features"
           }
         }
@@ -281,100 +541,307 @@
         "Version": 1,
         "Type": "Trial",
         "TrainerName": "FastTreeOva",
-        "Score": 0.1623174603174603,
-        "RuntimeInSeconds": 2.697,
+        "Score": 0.25934523809523807,
+        "RuntimeInSeconds": 3.159,
         "Parameter": {
-          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e5 * e12",
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e11",
           "e0": {
             "OutputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks"
             ],
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel"
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks"
             ]
           },
           "e1": {
             "OutputColumnNames": [
               "Grade",
               "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
               "RedZonePct",
-              "LengthOfStay"
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
             ],
             "InputColumnNames": [
               "Grade",
               "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
               "RedZonePct",
-              "LengthOfStay"
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
             ]
           },
-          "e12": {
+          "e11": {
             "OutputColumnName": "PredictedLabel",
             "InputColumnName": "PredictedLabel"
           },
           "e2": {
-            "InputColumnName": "EntryReason",
-            "OutputColumnName": "EntryReason"
-          },
-          "e3": {
             "InputColumnNames": [
-              "Gender",
-              "Ethnicity",
               "SpecialEd",
               "IEP",
-              "EntryAcademicLevel",
-              "EntrySocialSkillsLevel",
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks",
               "Grade",
               "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
               "PriorIncidents",
               "OfficeReferrals",
               "Suspensions",
               "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
               "AvgVerbalAggression",
               "AvgPhysicalAggression",
               "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
               "RedZonePct",
-              "LengthOfStay",
-              "EntryReason"
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
             ],
             "OutputColumnName": "Features"
           },
-          "e4": {
-            "OutputColumnName": "ExitReason",
-            "InputColumnName": "ExitReason",
+          "e3": {
+            "OutputColumnName": "ExitReasonNumeric",
+            "InputColumnName": "ExitReasonNumeric",
             "AddKeyValueAnnotationsAsText": false
           },
-          "e5": {
+          "e4": {
             "NumberOfLeaves": 4,
             "MinimumExampleCountPerLeaf": 20,
             "NumberOfTrees": 4,
             "MaximumBinCountPerFeature": 254,
             "FeatureFraction": 1.0,
             "LearningRate": 0.099999999999999978,
-            "LabelColumnName": "ExitReason",
+            "LabelColumnName": "ExitReasonNumeric",
+            "FeatureColumnName": "Features",
+            "DiskTranspose": false
+          }
+        }
+      },
+      {
+        "Version": 1,
+        "Type": "Trial",
+        "TrainerName": "FastTreeOva",
+        "Score": 0.25495098039215691,
+        "RuntimeInSeconds": 3.282,
+        "Parameter": {
+          "_SCHEMA_": "e0 * e1 * e2 * e3 * e4 * e11",
+          "e0": {
+            "OutputColumnNames": [
+              "SpecialEd",
+              "IEP",
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks"
+            ],
+            "InputColumnNames": [
+              "SpecialEd",
+              "IEP",
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks"
+            ]
+          },
+          "e1": {
+            "OutputColumnNames": [
+              "Grade",
+              "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
+              "RedZonePct",
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
+            ],
+            "InputColumnNames": [
+              "Grade",
+              "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
+              "RedZonePct",
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
+            ]
+          },
+          "e11": {
+            "OutputColumnName": "PredictedLabel",
+            "InputColumnName": "PredictedLabel"
+          },
+          "e2": {
+            "InputColumnNames": [
+              "SpecialEd",
+              "IEP",
+              "CheckInOut",
+              "StructuredRecess",
+              "StructuredBreaks",
+              "Grade",
+              "Age",
+              "GenderNumeric",
+              "EthnicityNumeric",
+              "EntryReasonNumeric",
+              "PriorIncidents",
+              "OfficeReferrals",
+              "Suspensions",
+              "Expulsions",
+              "EntryAcademicLevelNumeric",
+              "SmallGroups",
+              "SocialWorkerVisits",
+              "PsychologistVisits",
+              "EntrySocialSkillsLevelNumeric",
+              "RiskScore",
+              "StudentStressLevelNormalized",
+              "FamilySupportNormalized",
+              "AcademicAbilityNormalized",
+              "EmotionalRegulationNormalized",
+              "AvgVerbalAggression",
+              "AvgPhysicalAggression",
+              "AvgAcademicEngagement",
+              "AvgSocialInteractions",
+              "AvgEmotionalRegulation",
+              "AvgAggressionRisk",
+              "AvgEngagementLevel",
+              "RedZonePct",
+              "YellowZonePct",
+              "BlueZonePct",
+              "GreenZonePct",
+              "BehaviorDays"
+            ],
+            "OutputColumnName": "Features"
+          },
+          "e3": {
+            "OutputColumnName": "ExitReasonNumeric",
+            "InputColumnName": "ExitReasonNumeric",
+            "AddKeyValueAnnotationsAsText": false
+          },
+          "e4": {
+            "NumberOfLeaves": 5,
+            "MinimumExampleCountPerLeaf": 25,
+            "NumberOfTrees": 4,
+            "MaximumBinCountPerFeature": 275,
+            "FeatureFraction": 0.99999999,
+            "LearningRate": 0.46898258390675118,
+            "LabelColumnName": "ExitReasonNumeric",
             "FeatureColumnName": "Features",
             "DiskTranspose": false
           }
@@ -384,19 +851,18 @@
     "Estimators": {
       "e0": "OneHotEncoding",
       "e1": "ReplaceMissingValues",
-      "e2": "FeaturizeText",
-      "e3": "Concatenate",
-      "e4": "MapValueToKey",
-      "e5": "FastTreeOva",
-      "e6": "FastForestOva",
-      "e7": "LightGbmMulti",
-      "e8": "LbfgsLogisticRegressionOva",
-      "e9": "LbfgsMaximumEntropyMulti",
-      "e10": "SdcaMaximumEntropyMulti",
-      "e11": "SdcaLogisticRegressionOva",
-      "e12": "MapKeyToValue"
+      "e2": "Concatenate",
+      "e3": "MapValueToKey",
+      "e4": "FastTreeOva",
+      "e5": "FastForestOva",
+      "e6": "LightGbmMulti",
+      "e7": "LbfgsLogisticRegressionOva",
+      "e8": "LbfgsMaximumEntropyMulti",
+      "e9": "SdcaMaximumEntropyMulti",
+      "e10": "SdcaLogisticRegressionOva",
+      "e11": "MapKeyToValue"
     },
-    "Schema": "e0 * e1 * e2 * e3 * e4 * (e5 + e6 + e7 + e8 + e9 + e10 + e11) * e12",
+    "Schema": "e0 * e1 * e2 * e3 * (e4 + e5 + e6 + e7 + e8 + e9 + e10) * e11",
     "MetricName": "MacroAccuracy",
     "ModelFilePath": "C:\\Users\\cburk\\source\\repos\\BridgeVueApp\\BridgeVueApp\\ML_Class_Success.mlnet"
   },
@@ -409,7 +875,7 @@
     "Type": "ClassificationTrainingOption",
     "TrainingTime": 90,
     "OptimizeMetric": "MacroAccuracy",
-    "LabelColumn": "ExitReason",
+    "LabelColumn": "ExitReasonNumeric",
     "AvailableTrainers": [
       "SDCA",
       "LBFGS",

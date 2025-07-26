@@ -34,7 +34,7 @@ namespace BridgeVueApp
             btnViewDatabaseInfo = new Button();
             btnLoadDailyBehavior = new Button();
             btnLoadIntakeData = new Button();
-            btnGenerateData = new Button();
+            btnGenerateSyntheticData = new Button();
             gbxDatbase = new GroupBox();
             btnExitOutcomeAvgs = new Button();
             btnExitOutcomeCount = new Button();
@@ -63,7 +63,7 @@ namespace BridgeVueApp
             btnCreateDatabaseAndTables.Name = "btnCreateDatabaseAndTables";
             btnCreateDatabaseAndTables.Size = new Size(192, 23);
             btnCreateDatabaseAndTables.TabIndex = 1;
-            btnCreateDatabaseAndTables.Text = "Create Database and Tables";
+            btnCreateDatabaseAndTables.Text = "DROP / Create Database / Tables";
             btnCreateDatabaseAndTables.UseVisualStyleBackColor = true;
             btnCreateDatabaseAndTables.Click += btnCreateDatabaseAndTables_Click;
             // 
@@ -116,15 +116,15 @@ namespace BridgeVueApp
             btnLoadIntakeData.UseVisualStyleBackColor = true;
             btnLoadIntakeData.Click += btnLoadIntakeData_Click;
             // 
-            // btnGenerateData
+            // btnGenerateSyntheticData
             // 
-            btnGenerateData.Location = new Point(15, 31);
-            btnGenerateData.Name = "btnGenerateData";
-            btnGenerateData.Size = new Size(192, 23);
-            btnGenerateData.TabIndex = 8;
-            btnGenerateData.Text = "Generate Synthethic Data";
-            btnGenerateData.UseVisualStyleBackColor = true;
-            btnGenerateData.Click += btnGenerateData_Click;
+            btnGenerateSyntheticData.Location = new Point(15, 31);
+            btnGenerateSyntheticData.Name = "btnGenerateSyntheticData";
+            btnGenerateSyntheticData.Size = new Size(192, 23);
+            btnGenerateSyntheticData.TabIndex = 8;
+            btnGenerateSyntheticData.Text = "Generate Synthethic Data";
+            btnGenerateSyntheticData.UseVisualStyleBackColor = true;
+            btnGenerateSyntheticData.Click += btnGenerateSyntheticData_Click;
             // 
             // gbxDatbase
             // 
@@ -178,7 +178,7 @@ namespace BridgeVueApp
             gbxGenerate.BackColor = SystemColors.Desktop;
             gbxGenerate.Controls.Add(btnSaveGeneratedCSV);
             gbxGenerate.Controls.Add(btnLoadGeneratedData);
-            gbxGenerate.Controls.Add(btnGenerateData);
+            gbxGenerate.Controls.Add(btnGenerateSyntheticData);
             gbxGenerate.Location = new Point(280, 56);
             gbxGenerate.Name = "gbxGenerate";
             gbxGenerate.Size = new Size(228, 127);
@@ -240,7 +240,7 @@ namespace BridgeVueApp
         private Button btnViewDatabaseInfo;
         private Button btnLoadDailyBehavior;
         private Button btnLoadIntakeData;
-        private Button btnGenerateData;
+        private Button btnGenerateSyntheticData;
         private GroupBox gbxDatbase;
         private GroupBox gbxLoadData;
         private GroupBox gbxGenerate;
