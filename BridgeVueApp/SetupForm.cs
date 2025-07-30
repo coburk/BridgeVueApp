@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using Bogus;
 
 namespace BridgeVueApp
 {
@@ -77,6 +78,8 @@ namespace BridgeVueApp
                 -- Create Student Profile Table with numeric equivalents
                 CREATE TABLE {tableStudentProfile} (
                     StudentID INT PRIMARY KEY,
+                    FirstName NVARCHAR(50),
+                    LastName NVARCHAR(50),
                     Grade INT NOT NULL,
                     Age INT NOT NULL,
                     Gender NVARCHAR(10),

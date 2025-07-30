@@ -80,7 +80,7 @@ namespace BridgeVueApp
             // lblStatus
             // 
             lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(34, 260);
+            lblStatus.Location = new Point(34, 241);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(112, 15);
             lblStatus.TabIndex = 4;

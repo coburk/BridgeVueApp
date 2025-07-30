@@ -154,7 +154,7 @@ namespace BridgeVueApp
 
                         // Then update the display:
                         rtbRandomPredictionOutput.AppendText($"{predictedExitReason}   [Confidence: {modelConfidence:P1}]\n\n");
-                        
+
 
                         // Build output string for the RichTextBox - RESTORE ALL THE ORIGINAL FORMATTING
                         rtbRandomPredictionOutput.Clear();
@@ -172,7 +172,7 @@ namespace BridgeVueApp
                         rtbRandomPredictionOutput.AppendText($"{predictedExitReason}\n[Confidence: {modelConfidence:P1}]\n\n");
 
                         //float modelAccuracy = 0.94f;
-                        
+
                         // Student Summary Header
                         rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
                         rtbRandomPredictionOutput.SelectionColor = Color.Blue;
@@ -442,7 +442,5 @@ namespace BridgeVueApp
             public float RedZonePct { get; set; }
             public float GreenZonePct { get; set; } // Added
         }
-
-        
     }
 }
