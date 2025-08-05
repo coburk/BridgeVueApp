@@ -1,13 +1,15 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.ML;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.Data.SqlClient;
 
 
 namespace BridgeVueApp
@@ -293,6 +295,9 @@ namespace BridgeVueApp
         // Handle batch prediction button click
         private void btnBatchPredict_Click(object sender, EventArgs e)
         {
+            // Log the button click for debugging
+            Debug.WriteLine($"Button clicked at {DateTime.Now:HH:mm:ss.fff}");
+
             string connString = "Server=localhost;Database=BridgeVue;Integrated Security=True;TrustServerCertificate=True;";
             string sql = "SELECT * FROM vStudentMLData ORDER BY StudentID ASC";
 
@@ -442,5 +447,20 @@ namespace BridgeVueApp
             public float RedZonePct { get; set; }
             public float GreenZonePct { get; set; } // Added
         }
+
+        private void btnTrain_Click(object sender, EventArgs e)
+        {
+
+            // TODO: Replace this with actual database loading
+            var mlContext = new MLContext();
+            var trainingData = ModelTrainer.LoadTrainingDataFromDatabase();
+            var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+            ModelTrainer.TrainAndLogModel(split.TrainSet, split.TestSet);
+
+
+            MessageBox.Show("Model training completed and logged.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
     }
 }

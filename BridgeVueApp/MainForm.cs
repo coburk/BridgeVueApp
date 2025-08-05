@@ -264,7 +264,7 @@ namespace BridgeVueApp
             using (SqlConnection conn = new SqlConnection(DatabaseConfig.FullConnection))
             {
                 conn.Open();
-                string query = "SELECT StudentID, FirstName, LastName FROM StudentProfile ORDER BY LastName, FirstName";
+                string query = "SELECT StudentID, FirstName, LastName FROM StudentProfile ORDER BY FirstName";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {

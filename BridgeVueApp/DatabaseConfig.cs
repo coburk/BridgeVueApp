@@ -14,6 +14,7 @@ namespace BridgeVueApp
         public const string TableIntakeData = "IntakeData";
         public const string TableDailyBehavior = "DailyBehavior";
         public const string TableExitData = "ExitData";
+        public const string TableModelPerformances = "ModelPerformances";
 
         // Connection strings
         public static string BaseConnection =>

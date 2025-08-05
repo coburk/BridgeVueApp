@@ -116,11 +116,12 @@
             // 
             lblDailyBehaviorEntry.AutoSize = true;
             lblDailyBehaviorEntry.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lblDailyBehaviorEntry.Location = new Point(138, 36);
+            lblDailyBehaviorEntry.Location = new Point(193, 32);
             lblDailyBehaviorEntry.Name = "lblDailyBehaviorEntry";
-            lblDailyBehaviorEntry.Size = new Size(282, 21);
+            lblDailyBehaviorEntry.Size = new Size(161, 21);
             lblDailyBehaviorEntry.TabIndex = 2;
-            lblDailyBehaviorEntry.Text = "Record daily behavior and engagement";
+            lblDailyBehaviorEntry.Text = "Record daily behavior\r\n";
+            lblDailyBehaviorEntry.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // cmbStudent
             // 
@@ -270,7 +271,7 @@
             rtbStaffComments.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
             rtbStaffComments.Location = new Point(28, 497);
             rtbStaffComments.Name = "rtbStaffComments";
-            rtbStaffComments.Size = new Size(330, 97);
+            rtbStaffComments.Size = new Size(330, 107);
             rtbStaffComments.TabIndex = 17;
             rtbStaffComments.Text = "";
             // 
@@ -338,7 +339,7 @@
             tblZoneColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tblZoneColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tblZoneColors.Location = new Point(26, 248);
-            tblZoneColors.Margin = new Padding(2);
+            tblZoneColors.Margin = new Padding(2, 2, 2, 2);
             tblZoneColors.Name = "tblZoneColors";
             tblZoneColors.RowCount = 1;
             tblZoneColors.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));

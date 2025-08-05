@@ -70,6 +70,8 @@
             gbxBatchSummary = new GroupBox();
             lblBatchSummary = new Label();
             btnBatchPredict = new Button();
+            tabTrain = new TabPage();
+            btnTrain = new Button();
             tabControl1.SuspendLayout();
             tabRandom.SuspendLayout();
             tabManual.SuspendLayout();
@@ -88,6 +90,7 @@
             tabBatch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvBatchPrediction).BeginInit();
             gbxBatchSummary.SuspendLayout();
+            tabTrain.SuspendLayout();
             SuspendLayout();
             // 
             // btnRandomStudentPredict
@@ -105,6 +108,7 @@
             tabControl1.Controls.Add(tabRandom);
             tabControl1.Controls.Add(tabManual);
             tabControl1.Controls.Add(tabBatch);
+            tabControl1.Controls.Add(tabTrain);
             tabControl1.Location = new Point(12, 12);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
@@ -520,6 +524,7 @@
             dgvBatchPrediction.Name = "dgvBatchPrediction";
             dgvBatchPrediction.ReadOnly = true;
             dgvBatchPrediction.RowHeadersVisible = false;
+            dgvBatchPrediction.RowHeadersWidth = 62;
             dgvBatchPrediction.Size = new Size(646, 256);
             dgvBatchPrediction.TabIndex = 2;
             // 
@@ -538,9 +543,9 @@
             lblBatchSummary.AutoSize = true;
             lblBatchSummary.Location = new Point(11, 22);
             lblBatchSummary.Name = "lblBatchSummary";
-            lblBatchSummary.Size = new Size(38, 15);
+            lblBatchSummary.Size = new Size(91, 15);
             lblBatchSummary.TabIndex = 0;
-            lblBatchSummary.Text = "label1";
+            lblBatchSummary.Text = "Batch Summary";
             // 
             // btnBatchPredict
             // 
@@ -551,6 +556,27 @@
             btnBatchPredict.Text = "Run Batch Prediction on Current Students";
             btnBatchPredict.UseVisualStyleBackColor = true;
             btnBatchPredict.Click += btnBatchPredict_Click;
+            // 
+            // tabTrain
+            // 
+            tabTrain.Controls.Add(btnTrain);
+            tabTrain.Location = new Point(4, 24);
+            tabTrain.Name = "tabTrain";
+            tabTrain.Padding = new Padding(3);
+            tabTrain.Size = new Size(703, 475);
+            tabTrain.TabIndex = 3;
+            tabTrain.Text = "Train Model";
+            tabTrain.UseVisualStyleBackColor = true;
+            // 
+            // btnTrain
+            // 
+            btnTrain.Location = new Point(40, 19);
+            btnTrain.Name = "btnTrain";
+            btnTrain.Size = new Size(112, 23);
+            btnTrain.TabIndex = 0;
+            btnTrain.Text = "Train Model";
+            btnTrain.UseVisualStyleBackColor = true;
+            btnTrain.Click += btnTrain_Click;
             // 
             // PredictionForm
             // 
@@ -584,6 +610,7 @@
             ((System.ComponentModel.ISupportInitialize)dgvBatchPrediction).EndInit();
             gbxBatchSummary.ResumeLayout(false);
             gbxBatchSummary.PerformLayout();
+            tabTrain.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -630,5 +657,7 @@
         private Label lblAvgEngagement;
         private NumericUpDown nudRedZonePercent;
         private Label lblRedZone;
+        private TabPage tabTrain;
+        private Button btnTrain;
     }
 }

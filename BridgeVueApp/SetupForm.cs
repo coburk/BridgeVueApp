@@ -89,7 +89,9 @@ namespace BridgeVueApp
                     SpecialEd BIT NOT NULL DEFAULT 0,
                     IEP BIT NOT NULL DEFAULT 0,
                     CreatedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    ModifiedDate DATETIME2 DEFAULT GETUTCDATE()
+                    ModifiedDate DATETIME2 DEFAULT GETUTCDATE(),
+                    HasKnownOutcome BIT DEFAULT 0
+                    DidSucceed BIT NULL
                 );
 
                 -- Create Intake Data Table with numeric and normalized fields
@@ -180,6 +182,24 @@ namespace BridgeVueApp
                     CONSTRAINT FK_Exit_Student FOREIGN KEY (StudentID) REFERENCES {tableStudentProfile}(StudentID) ON DELETE CASCADE
                 );
 
+                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ModelPerformances' AND xtype='U')
+                    BEGIN
+                        CREATE TABLE ModelPerformances (
+                            Id INT IDENTITY(1,1) PRIMARY KEY,
+                            ModelName NVARCHAR(100),
+                            TrainingDate DATETIME2,
+                            Accuracy FLOAT,
+                            F1Score FLOAT,
+                            AUC FLOAT,
+                            Precision FLOAT,
+                            Recall FLOAT,
+                            TrainingDataSize INT,
+                            TestDataSize INT,
+                            IsCurrentBest BIT,
+                            ModelFilePath NVARCHAR(500)
+                        );
+                    END;
+                    
                 -- Create indexes for better query performance
                 CREATE INDEX IX_IntakeData_StudentID ON {tableIntakeData}(StudentID);
                 CREATE INDEX IX_IntakeData_EntryDate ON {tableIntakeData}(EntryDate);
@@ -1953,5 +1973,21 @@ namespace BridgeVueApp
         public double OverallImprovementScore { get; set; }  // Calculated improvement metric (0-1)
         public double ProgramEffectivenessScore { get; set; } // How well program worked for student (0-1)
         public int SuccessIndicator { get; set; }           // Binary: 1 = successful outcome, 0 = unsuccessful
+    }
+
+
+    public class ModelPerformance
+    {
+        public string ModelName { get; set; }
+        public DateTime TrainingDate { get; set; }
+        public float Accuracy { get; set; }
+        public float F1Score { get; set; }
+        public float AUC { get; set; }
+        public float Precision { get; set; }
+        public float Recall { get; set; }
+        public int TrainingDataSize { get; set; }
+        public int TestDataSize { get; set; }
+        public bool IsCurrentBest { get; set; }
+        public string ModelFilePath { get; set; }
     }
 }
