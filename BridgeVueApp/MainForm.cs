@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.Data.SqlClient;
+using BridgeVueApp.Models;
+
 
 namespace BridgeVueApp
 {
@@ -275,11 +277,11 @@ namespace BridgeVueApp
                         students.Add(new Student
                         {
                             StudentID = reader.GetInt32(0),
-                            FirstName = reader.GetString(1),
-                            LastName = reader.GetString(2),
-                            //Grade = reader.GetInt32(3)
+                            FirstName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                            LastName = reader.IsDBNull(2) ? null : reader.GetString(2),
                         });
                     }
+
                 }
             }
 

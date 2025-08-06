@@ -1,4 +1,6 @@
-﻿namespace BridgeVueApp
+﻿using BridgeVueApp.Models;
+
+namespace BridgeVueApp
 {
     partial class MainForm
     {
@@ -136,7 +138,6 @@
             // 
             // studentProfileBindingSource
             // 
-            studentProfileBindingSource.DataSource = typeof(StudentProfile);
             studentProfileBindingSource.CurrentChanged += studentProfileBindingSource_CurrentChanged;
             // 
             // dateTimePicker1

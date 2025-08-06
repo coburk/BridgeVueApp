@@ -7,6 +7,8 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using Bogus;
+using BridgeVueApp.Models;
+
 
 namespace BridgeVueApp
 {
@@ -36,331 +38,10 @@ namespace BridgeVueApp
         // DROP and Create Database and Tables
         private void btnCreateDatabaseAndTables_Click(object sender, EventArgs e)
         {
-            try
-            {
-                lblStatus.Text = "Dropping and Creating database and tables...";
-                Application.DoEvents();
-
-                // Create the database first
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                {
-                    conn.Open();
-                    string createDb = $"IF DB_ID('{dbName}') IS NULL CREATE DATABASE {dbName};";
-                    new SqlCommand(createDb, conn).ExecuteNonQuery();
-                }
-
-                // Create/update all tables with enhanced schema
-                using (SqlConnection conn = new SqlConnection(dbConnection))
-                {
-                    conn.Open();
-
-                    // Drop and recreate tables to ensure proper schema
-                    string dropAndCreateTables = $@"
-                -- Drop existing tables in correct order (respecting foreign keys)
-                IF OBJECT_ID('vw_BehavioralAggregates', 'V') IS NOT NULL
-                    DROP VIEW vw_BehavioralAggregates;
-                    
-                IF OBJECT_ID('vw_MLReadyData', 'V') IS NOT NULL
-                    DROP VIEW vw_MLReadyData;
-
-                IF OBJECT_ID('{tableExitData}', 'U') IS NOT NULL
-                    DROP TABLE {tableExitData};
-
-                IF OBJECT_ID('{tableDailyBehavior}', 'U') IS NOT NULL
-                    DROP TABLE {tableDailyBehavior};
-
-                IF OBJECT_ID('{tableIntakeData}', 'U') IS NOT NULL
-                    DROP TABLE {tableIntakeData};
-
-                IF OBJECT_ID('{tableStudentProfile}', 'U') IS NOT NULL
-                    DROP TABLE {tableStudentProfile};
-
-                -- Create Student Profile Table with numeric equivalents
-                CREATE TABLE {tableStudentProfile} (
-                    StudentID INT PRIMARY KEY,
-                    FirstName NVARCHAR(50),
-                    LastName NVARCHAR(50),
-                    Grade INT NOT NULL,
-                    Age INT NOT NULL,
-                    Gender NVARCHAR(10),
-                    GenderNumeric INT NOT NULL DEFAULT 0,
-                    Ethnicity NVARCHAR(20),
-                    EthnicityNumeric INT NOT NULL DEFAULT 0,
-                    SpecialEd BIT NOT NULL DEFAULT 0,
-                    IEP BIT NOT NULL DEFAULT 0,
-                    CreatedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    ModifiedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    HasKnownOutcome BIT DEFAULT 0
-                    DidSucceed BIT NULL
-                );
-
-                -- Create Intake Data Table with numeric and normalized fields
-                CREATE TABLE {tableIntakeData} (
-                    IntakeID INT IDENTITY(1,1) PRIMARY KEY,
-                    StudentID INT NOT NULL,
-                    EntryReason NVARCHAR(50),
-                    EntryReasonNumeric INT NOT NULL DEFAULT 0,
-                    PriorIncidents INT NOT NULL DEFAULT 0,
-                    OfficeReferrals INT NOT NULL DEFAULT 0,
-                    Suspensions INT NOT NULL DEFAULT 0,
-                    Expulsions INT NOT NULL DEFAULT 0,
-                    EntryAcademicLevel NVARCHAR(20),
-                    EntryAcademicLevelNumeric INT NOT NULL DEFAULT 0,
-                    CheckInOut BIT NOT NULL DEFAULT 0,
-                    StructuredRecess BIT NOT NULL DEFAULT 0,
-                    StructuredBreaks BIT NOT NULL DEFAULT 0,
-                    SmallGroups INT NOT NULL DEFAULT 0,
-                    SocialWorkerVisits INT NOT NULL DEFAULT 0,
-                    PsychologistVisits INT NOT NULL DEFAULT 0,
-                    EntrySocialSkillsLevel NVARCHAR(20),
-                    EntrySocialSkillsLevelNumeric INT NOT NULL DEFAULT 0,
-                    EntryDate DATE NOT NULL,
-                    RiskScore INT NOT NULL DEFAULT 1,
-                    -- ML-focused normalized fields (0-1 scale)
-                    StudentStressLevelNormalized FLOAT NOT NULL DEFAULT 0.0,
-                    FamilySupportNormalized FLOAT NOT NULL DEFAULT 0.0,
-                    AcademicAbilityNormalized FLOAT NOT NULL DEFAULT 0.0,
-                    EmotionalRegulationNormalized FLOAT NOT NULL DEFAULT 0.0,
-                    CreatedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    ModifiedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    CONSTRAINT FK_Intake_Student FOREIGN KEY (StudentID) REFERENCES {tableStudentProfile}(StudentID) ON DELETE CASCADE
-                );
-
-                -- Create Daily Behavior Table with numeric and ML fields
-                CREATE TABLE {tableDailyBehavior} (
-                    BehaviorID INT IDENTITY(1,1) PRIMARY KEY,
-                    StudentID INT NOT NULL,
-                    Timestamp DATETIME2 NOT NULL,
-                    Level INT NOT NULL DEFAULT 1,
-                    Step INT NOT NULL DEFAULT 1,
-                    VerbalAggression INT NOT NULL DEFAULT 0,
-                    PhysicalAggression INT NOT NULL DEFAULT 0,
-                    Elopement INT NOT NULL DEFAULT 0,
-                    OutOfSpot INT NOT NULL DEFAULT 0,
-                    WorkRefusal INT NOT NULL DEFAULT 0,
-                    ProvokingPeers INT NOT NULL DEFAULT 0,
-                    InappropriateLanguage INT NOT NULL DEFAULT 0,
-                    OutOfLane INT NOT NULL DEFAULT 0,
-                    ZoneOfRegulation NVARCHAR(10),
-                    ZoneOfRegulationNumeric INT NOT NULL DEFAULT 0,
-                    AcademicEngagement INT NOT NULL DEFAULT 1,
-                    SocialInteractions INT NOT NULL DEFAULT 1,
-                    EmotionalRegulation INT NOT NULL DEFAULT 1,
-                    StaffComments NVARCHAR(500),
-                    WeeklyEmotionDate DATE,
-                    WeeklyEmotionPictogram NVARCHAR(20),
-                    WeeklyEmotionPictogramNumeric INT,
-                    -- ML metrics
-                    AggressionRiskNormalized FLOAT NOT NULL DEFAULT 0.0,
-                    EngagementLevelNormalized FLOAT NOT NULL DEFAULT 0.0,
-                    DayInProgram INT NOT NULL DEFAULT 1,
-                    WeekInProgram INT NOT NULL DEFAULT 1,
-                    CreatedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    CONSTRAINT FK_Behavior_Student FOREIGN KEY (StudentID) REFERENCES {tableStudentProfile}(StudentID) ON DELETE CASCADE
-                );
-
-                -- Create Exit Data Table with numeric and ML improvement metrics
-                CREATE TABLE {tableExitData} (
-                    ExitID INT IDENTITY(1,1) PRIMARY KEY,
-                    StudentID INT NOT NULL,
-                    ExitReason NVARCHAR(50),
-                    ExitReasonNumeric INT NOT NULL DEFAULT 0,
-                    ExitDate DATE NOT NULL,
-                    LengthOfStay INT NOT NULL DEFAULT 0,
-                    ExitAcademicLevel NVARCHAR(20),
-                    ExitAcademicLevelNumeric INT NOT NULL DEFAULT 0,
-                    ExitSocialSkillsLevel NVARCHAR(20),
-                    ExitSocialSkillsLevelNumeric INT NOT NULL DEFAULT 0,
-                    -- ML improvement metrics
-                    AcademicImprovement INT NOT NULL DEFAULT 0,
-                    SocialSkillsImprovement INT NOT NULL DEFAULT 0,
-                    OverallImprovementScore FLOAT NOT NULL DEFAULT 0.0,
-                    ProgramEffectivenessScore FLOAT NOT NULL DEFAULT 0.0,
-                    SuccessIndicator BIT NOT NULL DEFAULT 0,
-                    CreatedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    ModifiedDate DATETIME2 DEFAULT GETUTCDATE(),
-                    CONSTRAINT FK_Exit_Student FOREIGN KEY (StudentID) REFERENCES {tableStudentProfile}(StudentID) ON DELETE CASCADE
-                );
-
-                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ModelPerformances' AND xtype='U')
-                    BEGIN
-                        CREATE TABLE ModelPerformances (
-                            Id INT IDENTITY(1,1) PRIMARY KEY,
-                            ModelName NVARCHAR(100),
-                            TrainingDate DATETIME2,
-                            Accuracy FLOAT,
-                            F1Score FLOAT,
-                            AUC FLOAT,
-                            Precision FLOAT,
-                            Recall FLOAT,
-                            TrainingDataSize INT,
-                            TestDataSize INT,
-                            IsCurrentBest BIT,
-                            ModelFilePath NVARCHAR(500)
-                        );
-                    END;
-                    
-                -- Create indexes for better query performance
-                CREATE INDEX IX_IntakeData_StudentID ON {tableIntakeData}(StudentID);
-                CREATE INDEX IX_IntakeData_EntryDate ON {tableIntakeData}(EntryDate);
-                CREATE INDEX IX_DailyBehavior_StudentID_Timestamp ON {tableDailyBehavior}(StudentID, Timestamp);
-                CREATE INDEX IX_DailyBehavior_Timestamp ON {tableDailyBehavior}(Timestamp);
-                CREATE INDEX IX_ExitData_StudentID ON {tableExitData}(StudentID);
-                CREATE INDEX IX_ExitData_ExitDate ON {tableExitData}(ExitDate);
-            ";
-
-                    new SqlCommand(dropAndCreateTables, conn).ExecuteNonQuery();
-
-                    // Create views separately to avoid issues with dynamic SQL
-                    CreateMLViews(conn);
-                }
-
-                // Display success status with details
-                DisplayDatabaseCreationStatus();
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"Database creation failed: {ex.Message}";
-                MessageBox.Show($"Error creating database or tables:\n\n{ex.Message}\n\nThis will drop and recreate all tables. Any existing data will be lost.",
-                               "Database Creation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            DatabaseInitializer.CreateDatabaseIfNotExists();
+            DatabaseInitializer.CreateTablesIfNotExist();
+            lblStatus.Text = "✅ DB created!";
         }
-
-
-
-        // Create ML views separately
-        private void CreateMLViews(SqlConnection conn)
-        {
-            try
-            {
-                // Create ML-ready view
-                string createMLView = $@"
-            CREATE VIEW vw_MLReadyData AS
-            SELECT 
-                sp.StudentID,
-                sp.Age,
-                sp.Grade,
-                sp.GenderNumeric,
-                sp.EthnicityNumeric,
-                sp.SpecialEd,
-                sp.IEP,
-                i.EntryReasonNumeric,
-                i.PriorIncidents,
-                i.OfficeReferrals,
-                i.Suspensions,
-                i.Expulsions,
-                i.EntryAcademicLevelNumeric,
-                i.EntrySocialSkillsLevelNumeric,
-                i.RiskScore,
-                i.StudentStressLevelNormalized,
-                i.FamilySupportNormalized,
-                i.AcademicAbilityNormalized,
-                i.EmotionalRegulationNormalized,
-                i.CheckInOut,
-                i.StructuredRecess,
-                i.StructuredBreaks,
-                i.SmallGroups,
-                i.SocialWorkerVisits,
-                i.PsychologistVisits,
-                e.ExitReasonNumeric,
-                e.LengthOfStay,
-                e.ExitAcademicLevelNumeric,
-                e.ExitSocialSkillsLevelNumeric,
-                e.AcademicImprovement,
-                e.SocialSkillsImprovement,
-                e.OverallImprovementScore,
-                e.ProgramEffectivenessScore,
-                e.SuccessIndicator,
-                CASE WHEN e.StudentID IS NOT NULL THEN 1 ELSE 0 END AS HasExited
-            FROM {tableStudentProfile} sp
-            INNER JOIN {tableIntakeData} i ON sp.StudentID = i.StudentID
-            LEFT JOIN {tableExitData} e ON sp.StudentID = e.StudentID";
-
-                new SqlCommand(createMLView, conn).ExecuteNonQuery();
-
-                // Create behavioral aggregates view
-                string createBehaviorView = $@"
-            CREATE VIEW vw_BehavioralAggregates AS
-            SELECT 
-                StudentID,
-                COUNT(*) AS DaysInProgram,
-                MAX(WeekInProgram) AS WeeksInProgram,
-                SUM(VerbalAggression + PhysicalAggression) AS TotalAggression,
-                AVG(CAST(VerbalAggression + PhysicalAggression AS FLOAT)) AS AvgDailyAggression,
-                AVG(AggressionRiskNormalized) AS AvgAggressionRisk,
-                AVG(CAST(AcademicEngagement AS FLOAT)) AS AvgAcademicEngagement,
-                AVG(EngagementLevelNormalized) AS AvgEngagementLevel,
-                SUM(CASE WHEN ZoneOfRegulationNumeric = 1 THEN 1 ELSE 0 END) AS RedZoneDays,
-                SUM(CASE WHEN ZoneOfRegulationNumeric = 2 THEN 1 ELSE 0 END) AS YellowZoneDays,
-                SUM(CASE WHEN ZoneOfRegulationNumeric = 3 THEN 1 ELSE 0 END) AS BlueZoneDays,
-                SUM(CASE WHEN ZoneOfRegulationNumeric = 4 THEN 1 ELSE 0 END) AS GreenZoneDays,
-                AVG(CAST(ZoneOfRegulationNumeric AS FLOAT)) AS AvgZoneScore,
-                SUM(Elopement) AS TotalElopements,
-                SUM(WorkRefusal) AS TotalWorkRefusals,
-                AVG(CAST(SocialInteractions AS FLOAT)) AS AvgSocialInteractions,
-                AVG(CAST(EmotionalRegulation AS FLOAT)) AS AvgEmotionalRegulation,
-                MIN(Timestamp) AS FirstBehaviorDate,
-                MAX(Timestamp) AS LastBehaviorDate
-            FROM {tableDailyBehavior}
-            GROUP BY StudentID";
-
-                new SqlCommand(createBehaviorView, conn).ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                // Views are optional, so don't fail the whole process
-                System.Diagnostics.Debug.WriteLine($"Error creating views: {ex.Message}");
-            }
-        }
-
-        // Display database creation success status
-        private void DisplayDatabaseCreationStatus()
-        {
-            try
-            {
-                var statusMessage = new StringBuilder();
-                statusMessage.AppendLine("DATABASE & TABLES CREATED SUCCESSFULLY");
-                statusMessage.AppendLine($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC | User: {Environment.UserName}");
-                statusMessage.AppendLine($"Database: {dbName}");
-                statusMessage.AppendLine("");
-                statusMessage.AppendLine("TABLES CREATED:");
-                statusMessage.AppendLine($"   {tableStudentProfile} (Demographics + Numeric Equivalents)");
-                statusMessage.AppendLine($"   {tableIntakeData} (Assessments + ML Features)");
-                statusMessage.AppendLine($"   {tableDailyBehavior} (Tracking + ML Metrics)");
-                statusMessage.AppendLine($"   {tableExitData} (Outcomes + Improvement Metrics)");
-                statusMessage.AppendLine("");
-                statusMessage.AppendLine("VIEWS CREATED:");
-                statusMessage.AppendLine("   vw_MLReadyData (Combined dataset for ML training)");
-                statusMessage.AppendLine("   vw_BehavioralAggregates (Pre-calculated metrics)");
-                statusMessage.AppendLine("");
-                statusMessage.AppendLine("INDEXES CREATED:");
-                statusMessage.AppendLine("   Performance indexes on key columns");
-                statusMessage.AppendLine("   Foreign key relationships established");
-                statusMessage.AppendLine("");
-                statusMessage.AppendLine("Ready for synthetic data generation");
-
-                lblStatus.Text = statusMessage.ToString().TrimEnd();
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"Database Created | Status display error: {ex.Message}";
-            }
-        }
-
-        // Alternative compact version for smaller status labels
-        private void DisplayCompactDatabaseStatus()
-        {
-            try
-            {
-                lblStatus.Text = $"✅ Database '{dbName}' created with 4 tables + 2 views + indexes | " +
-                                $"Ready for data generation | {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"✅ Database Created | Error: {ex.Message}";
-            }
-        }
-
 
 
 
@@ -609,6 +290,9 @@ namespace BridgeVueApp
             // Implementation for loading DailyBehavior CSV
             lblStatus.Text = "DailyBehavior loaded successfully.";
         }
+
+
+
 
         // Generate Synthetic Student Data
         private async void btnGenerateSyntheticData_Click(object sender, EventArgs e)
@@ -1263,15 +947,17 @@ namespace BridgeVueApp
                         string query = $@"
                 IF NOT EXISTS (SELECT 1 FROM {tableStudentProfile} WHERE StudentID = @StudentID)
                 BEGIN
-                    INSERT INTO {tableStudentProfile} (StudentID, Grade, Age, Gender, GenderNumeric, 
-                        Ethnicity, EthnicityNumeric, SpecialEd, IEP)
-                    VALUES (@StudentID, @Grade, @Age, @Gender, @GenderNumeric, 
-                        @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP)
+                    INSERT INTO {tableStudentProfile} (StudentID, FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
+                        Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed)
+                    VALUES (@StudentID, @FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric, 
+                        @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed)
                 END";
 
                         using (SqlCommand cmd = new SqlCommand(query, conn))
                         {
                             cmd.Parameters.AddWithValue("@StudentID", profile.StudentID);
+                            cmd.Parameters.AddWithValue("@FirstName", profile.FirstName ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@LastName", profile.LastName ?? (object)DBNull.Value);
                             cmd.Parameters.AddWithValue("@Grade", profile.Grade);
                             cmd.Parameters.AddWithValue("@Age", profile.Age);
                             cmd.Parameters.AddWithValue("@Gender", profile.Gender ?? (object)DBNull.Value);
@@ -1280,6 +966,8 @@ namespace BridgeVueApp
                             cmd.Parameters.AddWithValue("@EthnicityNumeric", profile.EthnicityNumeric);
                             cmd.Parameters.AddWithValue("@SpecialEd", profile.SpecialEd);
                             cmd.Parameters.AddWithValue("@IEP", profile.IEP);
+                            cmd.Parameters.AddWithValue("@HasKnownOutcome", profile.HasKnownOutcome);
+                            cmd.Parameters.AddWithValue("@DidSucceed", profile.DidSucceed);
                             cmd.ExecuteNonQuery();
                         }
                     }
@@ -1877,102 +1565,6 @@ namespace BridgeVueApp
 
           //  MessageBox.Show("Ready to Load student profile...But nothing is here!");
         }
-    }
-
-
-    public class StudentProfile
-    {
-        public int StudentID { get; set; }
-        public int Grade { get; set; }
-        public int Age { get; set; }
-        public string Gender { get; set; }
-        public int GenderNumeric { get; set; }
-        public string Ethnicity { get; set; }
-        public int EthnicityNumeric { get; set; }
-        public int SpecialEd { get; set; }
-        public int IEP { get; set; }
-    }
-
-    public class IntakeData
-    {
-        public int IntakeID { get; set; }
-        public int StudentID { get; set; }
-        public string EntryReason { get; set; }
-        public int EntryReasonNumeric { get; set; }
-        public int PriorIncidents { get; set; }
-        public int OfficeReferrals { get; set; }
-        public int Suspensions { get; set; }
-        public int Expulsions { get; set; }
-        public string EntryAcademicLevel { get; set; }
-        public int EntryAcademicLevelNumeric { get; set; }
-        public int CheckInOut { get; set; }
-        public int StructuredRecess { get; set; }
-        public int StructuredBreaks { get; set; }
-        public int SmallGroups { get; set; }
-        public int SocialWorkerVisits { get; set; }
-        public int PsychologistVisits { get; set; }
-        public string EntrySocialSkillsLevel { get; set; }
-        public int EntrySocialSkillsLevelNumeric { get; set; }
-        public DateTime EntryDate { get; set; }
-        public int RiskScore { get; set; }
-
-        // Additional normalized scores for ML
-        public double StudentStressLevelNormalized { get; set; }
-        public double FamilySupportNormalized { get; set; }
-        public double AcademicAbilityNormalized { get; set; }
-        public double EmotionalRegulationNormalized { get; set; }
-    }
-
-    public class DailyBehavior
-    {
-        public int StudentID { get; set; }
-        public DateTime Timestamp { get; set; }
-        public int Level { get; set; }
-        public int Step { get; set; }
-        public int VerbalAggression { get; set; }
-        public int PhysicalAggression { get; set; }
-        public int Elopement { get; set; }
-        public int OutOfSpot { get; set; }
-        public int WorkRefusal { get; set; }
-        public int ProvokingPeers { get; set; }
-        public int InappropriateLanguage { get; set; }
-        public int OutOfLane { get; set; }
-        public string ZoneOfRegulation { get; set; }
-        public int ZoneOfRegulationNumeric { get; set; }
-        public int AcademicEngagement { get; set; }
-        public int SocialInteractions { get; set; }
-        public int EmotionalRegulation { get; set; }
-        public string StaffComments { get; set; }
-        public DateTime? WeeklyEmotionDate { get; set; }
-        public string WeeklyEmotionPictogram { get; set; }
-        public int? WeeklyEmotionPictogramNumeric { get; set; }
-
-        // Additional fields for ML
-        public double AggressionRiskNormalized { get; set; }
-        public double EngagementLevelNormalized { get; set; }
-        public int DayInProgram { get; set; }
-        public int WeekInProgram { get; set; }
-    }
-
-    public class ExitData
-    {
-        public int ExitID { get; set; }
-        public int StudentID { get; set; }
-        public string ExitReason { get; set; }
-        public int ExitReasonNumeric { get; set; }
-        public DateTime ExitDate { get; set; }
-        public int LengthOfStay { get; set; }
-        public string ExitAcademicLevel { get; set; }
-        public int ExitAcademicLevelNumeric { get; set; }
-        public string ExitSocialSkillsLevel { get; set; }
-        public int ExitSocialSkillsLevelNumeric { get; set; }
-
-        // Additional metrics for ML
-        public int AcademicImprovement { get; set; }        // Change in academic level (-2 to +2)
-        public int SocialSkillsImprovement { get; set; }    // Change in social skills level (-2 to +2)
-        public double OverallImprovementScore { get; set; }  // Calculated improvement metric (0-1)
-        public double ProgramEffectivenessScore { get; set; } // How well program worked for student (0-1)
-        public int SuccessIndicator { get; set; }           // Binary: 1 = successful outcome, 0 = unsuccessful
     }
 
 
