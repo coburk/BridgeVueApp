@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using BridgeVueApp.Database;
+using Microsoft.Data.SqlClient;
 using System.Data;
 using System.IO;
 

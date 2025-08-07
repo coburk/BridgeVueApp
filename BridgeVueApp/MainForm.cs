@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.Data.SqlClient;
 using BridgeVueApp.Models;
+using BridgeVueApp.Database;
 
 
 namespace BridgeVueApp

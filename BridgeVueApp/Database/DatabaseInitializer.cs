@@ -3,7 +3,7 @@ using System;
 using System.Data;
 using System.Text;
 
-namespace BridgeVueApp
+namespace BridgeVueApp.Database
 {
     public static class DatabaseInitializer
     {

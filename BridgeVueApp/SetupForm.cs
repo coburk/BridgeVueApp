@@ -1,14 +1,20 @@
-﻿using CsvHelper;
+﻿// SetupForm.cs
+
+using Bogus;
+using BridgeVueApp.Database;
+using BridgeVueApp.DataGeneration;
+using BridgeVueApp.Models;
+using CsvHelper;
 using Microsoft.Data.SqlClient;
+using Microsoft.ML.Data;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using Bogus;
-using BridgeVueApp;
-using BridgeVueApp.Models;
+using BridgeVueApp.Database;
+using BVDatabase = BridgeVueApp.Database.DatabaseLoader;
 
 
 
@@ -30,12 +36,46 @@ namespace BridgeVueApp
             InitializeComponent();
         }
 
+
+
+
         // DROP and Create Database and Tables
-        private void btnCreateDatabaseAndTables_Click(object sender, EventArgs e)
+        private async void btnCreateDatabaseAndTables_Click(object sender, EventArgs e)
         {
-            DatabaseInitializer.CreateDatabaseIfNotExists();
-            DatabaseInitializer.CreateTablesIfNotExist();
-            lblStatus.Text = "✅ DB created!";
+            progressBar.Value = 0;
+            lblStatus.Text = "Generating data...";
+
+            var progress = new Progress<string>(status =>
+            {
+                lblStatus.Text = status;
+
+                // Try to extract percentage from message (if any)
+                if (status.Contains("%"))
+                {
+                    int percent = ExtractPercentage(status);
+                    if (percent >= 0 && percent <= 100)
+                        progressBar.Value = percent;
+                }
+            });
+
+            var generator = new DataGenerationManager(progress);
+
+            try
+            {
+                await generator.GenerateAllAsync();
+                var summary = DataGenerationUtils.LastExitSummary;
+                lblStatus.Text = $"Synthetic Data Generated {summary.Count} exits | " +
+                                 $"Improvement: {summary.AvgImprovement:F2} | " +
+                                 $"Effectiveness: {summary.AvgEffectiveness:F2} | " +
+                                 $"Aggression: {summary.AvgAggression:F2}";
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Generation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "Data generation failed.";
+            }
         }
 
 
@@ -286,51 +326,26 @@ namespace BridgeVueApp
         // Generate Synthetic Student Data
         private async void btnGenerateSyntheticData_Click(object sender, EventArgs e)
         {
+            progressBar.Value = 0;
+            lblStatus.Text = "Generating synthetic data...";
+
+            var progress = new Progress<string>(status => lblStatus.Text = status);
+            var generator = new DataGenerationManager(progress);
+
+            try
+            {
+                await generator.GenerateSyntheticOnlyAsync(); // generate but do NOT save
+                lblStatus.Text = $"Synthetic data ready. {DataGenerationUtils.LastExitSummary.Count} exit records.";
+                progressBar.Value = 100;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Data generation failed: {ex.Message}");
+                lblStatus.Text = "❌ Data generation failed.";
+            }
         }
-/*
-            // Disable the button to prevent multiple clicks
-            btnGenerateSyntheticData.Enabled = false;
-            btnLoadGeneratedData.Enabled = false;
-            btnSaveGeneratedCSV.Enabled = false;
 
-        }
-        
-                    try
-                    {
-                        // Show initial status
-                        lblStatus.Text = "Initializing synthetic data generation...";
-                        Application.DoEvents();
 
-                        // Run the generation on a background thread with progress reporting
-                        var progress = new Progress<string>(message =>
-                        {
-                            lblStatus.Text = message;
-                            Application.DoEvents();
-                        });
-
-                        await Task.Run(() => GenerateSyntheticDataWithProgress(progress));
-
-                        // Show completion status
-                        DisplayGenerationSummaryInStatus();
-                    }
-                    catch (Exception ex)
-                    {
-                        lblStatus.Text = $"Generation Failed: {ex.Message}";
-                        MessageBox.Show($"Failed to generate synthetic data:\n\n{ex.Message}", "Generation Error",
-                                       MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    finally
- 
-                    {
-                        // Re-enable buttons
-                        btnGenerateSyntheticData.Enabled = true;
-                        btnLoadGeneratedData.Enabled = true;
-                        btnSaveGeneratedCSV.Enabled = true;
-                    }
-                }
-
-      */         
-        
 
 
 
@@ -339,216 +354,24 @@ namespace BridgeVueApp
 
         // Load Generated Data into Database
         private void btnLoadGeneratedData_Click(object sender, EventArgs e)
-{
-}
-/*
-            DialogResult result = MessageBox.Show("Do you want to clear existing data tables before loading new data?\nClick Yes to truncate and reload all tables, No to append only new records.", "Data Load Option", MessageBoxButtons.YesNoCancel);
-
-            if (result == DialogResult.Cancel)
-            {
-                lblStatus.Text = "Data load canceled by user.";
-                return;
-            }
-
+        {
             try
             {
-                using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
-                {
-                    dbConnection.Open();
+                BVDatabase.BulkInsertStudentProfiles(DataGenerationUtils.GeneratedProfiles);
+                BVDatabase.BulkInsertIntakeData(DataGenerationUtils.GeneratedIntake);
+                BVDatabase.BulkInsertDailyBehavior(DataGenerationUtils.GeneratedBehavior);
+                BVDatabase.BulkInsertExitData(DataGenerationUtils.GeneratedExitData);
 
-                    if (result == DialogResult.Yes)
-                    {
-                        // Truncate tables in correct order (respecting foreign key constraints)
-                        string truncateSql = $@"
-                    TRUNCATE TABLE {DatabaseConfig.TableExitData};
-                    TRUNCATE TABLE {DatabaseConfig.TableDailyBehavior}; 
-                    TRUNCATE TABLE {DatabaseConfig.TableIntakeData};
-                    TRUNCATE TABLE {DatabaseConfig.TableStudentProfile};";
 
-                        using (SqlCommand truncateCmd = new SqlCommand(truncateSql, dbConnection))
-                        {
-                            truncateCmd.ExecuteNonQuery();
-                        }
-                        lblStatus.Text = "Tables truncated. Loading new data...";
-                    }
-
-                    // Load Student Profiles with new numeric fields
-                    foreach (var profile in generatedProfiles)
-                    {
-                        string query = $@"
-                IF NOT EXISTS (SELECT 1 FROM {DatabaseConfig.TableStudentProfile} WHERE StudentID = @StudentID)
-                BEGIN
-                    INSERT INTO {DatabaseConfig.TableStudentProfile} (StudentID, FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
-                        Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed)
-                    VALUES (@StudentID, @FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric, 
-                        @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed)
-                END";
-
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
-                        {
-                            cmd.Parameters.AddWithValue("@StudentID", profile.StudentID);
-                            cmd.Parameters.AddWithValue("@FirstName", profile.FirstName ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@LastName", profile.LastName ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Grade", profile.Grade);
-                            cmd.Parameters.AddWithValue("@Age", profile.Age);
-                            cmd.Parameters.AddWithValue("@Gender", profile.Gender ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@GenderNumeric", profile.GenderNumeric);
-                            cmd.Parameters.AddWithValue("@Ethnicity", profile.Ethnicity ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@EthnicityNumeric", profile.EthnicityNumeric);
-                            cmd.Parameters.AddWithValue("@SpecialEd", profile.SpecialEd);
-                            cmd.Parameters.AddWithValue("@IEP", profile.IEP);
-                            cmd.Parameters.AddWithValue("@HasKnownOutcome", profile.HasKnownOutcome);
-                            cmd.Parameters.AddWithValue("@DidSucceed", profile.DidSucceed);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-
-                    // Load Intake Data with new numeric and normalized fields
-                    foreach (var intake in generatedIntake)
-                    {
-                        string query = $@"
-                IF NOT EXISTS (SELECT 1 FROM {DatabaseConfig.TableIntakeData} WHERE StudentID = @StudentID)
-                BEGIN
-                    INSERT INTO {DatabaseConfig.TableIntakeData} (StudentID, EntryReason, EntryReasonNumeric, PriorIncidents, 
-                        OfficeReferrals, Suspensions, Expulsions, EntryAcademicLevel, EntryAcademicLevelNumeric,
-                        CheckInOut, StructuredRecess, StructuredBreaks, SmallGroups, SocialWorkerVisits, 
-                        PsychologistVisits, EntrySocialSkillsLevel, EntrySocialSkillsLevelNumeric, EntryDate, 
-                        RiskScore, StudentStressLevelNormalized, FamilySupportNormalized, AcademicAbilityNormalized,
-                        EmotionalRegulationNormalized)
-                    VALUES (@StudentID, @EntryReason, @EntryReasonNumeric, @PriorIncidents, @OfficeReferrals, 
-                        @Suspensions, @Expulsions, @EntryAcademicLevel, @EntryAcademicLevelNumeric, @CheckInOut, 
-                        @StructuredRecess, @StructuredBreaks, @SmallGroups, @SocialWorkerVisits, @PsychologistVisits, 
-                        @EntrySocialSkillsLevel, @EntrySocialSkillsLevelNumeric, @EntryDate, @RiskScore,
-                        @StudentStressLevelNormalized, @FamilySupportNormalized, @AcademicAbilityNormalized,
-                        @EmotionalRegulationNormalized)
-                END";
-
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
-                        {
-                            cmd.Parameters.AddWithValue("@StudentID", intake.StudentID);
-                            cmd.Parameters.AddWithValue("@EntryReason", intake.EntryReason ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@EntryReasonNumeric", intake.EntryReasonNumeric);
-                            cmd.Parameters.AddWithValue("@PriorIncidents", intake.PriorIncidents);
-                            cmd.Parameters.AddWithValue("@OfficeReferrals", intake.OfficeReferrals);
-                            cmd.Parameters.AddWithValue("@Suspensions", intake.Suspensions);
-                            cmd.Parameters.AddWithValue("@Expulsions", intake.Expulsions);
-                            cmd.Parameters.AddWithValue("@EntryAcademicLevel", intake.EntryAcademicLevel ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@EntryAcademicLevelNumeric", intake.EntryAcademicLevelNumeric);
-                            cmd.Parameters.AddWithValue("@CheckInOut", intake.CheckInOut);
-                            cmd.Parameters.AddWithValue("@StructuredRecess", intake.StructuredRecess);
-                            cmd.Parameters.AddWithValue("@StructuredBreaks", intake.StructuredBreaks);
-                            cmd.Parameters.AddWithValue("@SmallGroups", intake.SmallGroups);
-                            cmd.Parameters.AddWithValue("@SocialWorkerVisits", intake.SocialWorkerVisits);
-                            cmd.Parameters.AddWithValue("@PsychologistVisits", intake.PsychologistVisits);
-                            cmd.Parameters.AddWithValue("@EntrySocialSkillsLevel", intake.EntrySocialSkillsLevel ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@EntrySocialSkillsLevelNumeric", intake.EntrySocialSkillsLevelNumeric);
-                            cmd.Parameters.AddWithValue("@EntryDate", intake.EntryDate);
-                            cmd.Parameters.AddWithValue("@RiskScore", intake.RiskScore);
-                            cmd.Parameters.AddWithValue("@StudentStressLevelNormalized", intake.StudentStressLevelNormalized);
-                            cmd.Parameters.AddWithValue("@FamilySupportNormalized", intake.FamilySupportNormalized);
-                            cmd.Parameters.AddWithValue("@AcademicAbilityNormalized", intake.AcademicAbilityNormalized);
-                            cmd.Parameters.AddWithValue("@EmotionalRegulationNormalized", intake.EmotionalRegulationNormalized);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-
-                    // Load Daily Behavior with new numeric and ML fields
-                    foreach (var behavior in generatedBehavior)
-                    {
-                        string query = $@"
-                INSERT INTO {DatabaseConfig.TableDailyBehavior} (StudentID, Timestamp, Level, Step, VerbalAggression, 
-                    PhysicalAggression, Elopement, OutOfSpot, WorkRefusal, ProvokingPeers, InappropriateLanguage, 
-                    OutOfLane, ZoneOfRegulation, ZoneOfRegulationNumeric, AcademicEngagement, SocialInteractions, 
-                    EmotionalRegulation, StaffComments, WeeklyEmotionDate, WeeklyEmotionPictogram, 
-                    WeeklyEmotionPictogramNumeric, AggressionRiskNormalized, EngagementLevelNormalized, 
-                    DayInProgram, WeekInProgram)
-                VALUES (@StudentID, @Timestamp, @Level, @Step, @VerbalAggression, @PhysicalAggression, 
-                    @Elopement, @OutOfSpot, @WorkRefusal, @ProvokingPeers, @InappropriateLanguage, @OutOfLane, 
-                    @ZoneOfRegulation, @ZoneOfRegulationNumeric, @AcademicEngagement, @SocialInteractions, 
-                    @EmotionalRegulation, @StaffComments, @WeeklyEmotionDate, @WeeklyEmotionPictogram, 
-                    @WeeklyEmotionPictogramNumeric, @AggressionRiskNormalized, @EngagementLevelNormalized, 
-                    @DayInProgram, @WeekInProgram)";
-
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
-                        {
-                            cmd.Parameters.AddWithValue("@StudentID", behavior.StudentID);
-                            cmd.Parameters.AddWithValue("@Timestamp", behavior.Timestamp);
-                            cmd.Parameters.AddWithValue("@Level", behavior.Level);
-                            cmd.Parameters.AddWithValue("@Step", behavior.Step);
-                            cmd.Parameters.AddWithValue("@VerbalAggression", behavior.VerbalAggression);
-                            cmd.Parameters.AddWithValue("@PhysicalAggression", behavior.PhysicalAggression);
-                            cmd.Parameters.AddWithValue("@Elopement", behavior.Elopement);
-                            cmd.Parameters.AddWithValue("@OutOfSpot", behavior.OutOfSpot);
-                            cmd.Parameters.AddWithValue("@WorkRefusal", behavior.WorkRefusal);
-                            cmd.Parameters.AddWithValue("@ProvokingPeers", behavior.ProvokingPeers);
-                            cmd.Parameters.AddWithValue("@InappropriateLanguage", behavior.InappropriateLanguage);
-                            cmd.Parameters.AddWithValue("@OutOfLane", behavior.OutOfLane);
-                            cmd.Parameters.AddWithValue("@ZoneOfRegulation", behavior.ZoneOfRegulation ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@ZoneOfRegulationNumeric", behavior.ZoneOfRegulationNumeric);
-                            cmd.Parameters.AddWithValue("@AcademicEngagement", behavior.AcademicEngagement);
-                            cmd.Parameters.AddWithValue("@SocialInteractions", behavior.SocialInteractions);
-                            cmd.Parameters.AddWithValue("@EmotionalRegulation", behavior.EmotionalRegulation);
-                            cmd.Parameters.AddWithValue("@StaffComments", behavior.StaffComments ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@WeeklyEmotionDate", behavior.WeeklyEmotionDate);
-                            cmd.Parameters.AddWithValue("@WeeklyEmotionPictogram", behavior.WeeklyEmotionPictogram ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@WeeklyEmotionPictogramNumeric", behavior.WeeklyEmotionPictogramNumeric);
-                            cmd.Parameters.AddWithValue("@AggressionRiskNormalized", behavior.AggressionRiskNormalized);
-                            cmd.Parameters.AddWithValue("@EngagementLevelNormalized", behavior.EngagementLevelNormalized);
-                            cmd.Parameters.AddWithValue("@DayInProgram", behavior.DayInProgram);
-                            cmd.Parameters.AddWithValue("@WeekInProgram", behavior.WeekInProgram);
-                            cmd.Parameters.AddWithValue("@CreatedDate", behavior.CreatedDate);
-                        }
-                    }
-
-                    // Load Exit Data with new numeric and ML metrics
-                    foreach (var exit in generatedExitData)
-                    {
-                        string query = $@"
-                INSERT INTO {DatabaseConfig.TableExitData} (StudentID, ExitReason, ExitReasonNumeric, ExitDate, LengthOfStay, 
-                    ExitAcademicLevel, ExitAcademicLevelNumeric, ExitSocialSkillsLevel, ExitSocialSkillsLevelNumeric,
-                    AcademicImprovement, SocialSkillsImprovement, OverallImprovementScore, ProgramEffectivenessScore,
-                    SuccessIndicator)
-                VALUES (@StudentID, @ExitReason, @ExitReasonNumeric, @ExitDate, @LengthOfStay, @ExitAcademicLevel, 
-                    @ExitAcademicLevelNumeric, @ExitSocialSkillsLevel, @ExitSocialSkillsLevelNumeric,
-                    @AcademicImprovement, @SocialSkillsImprovement, @OverallImprovementScore, 
-                    @ProgramEffectivenessScore, @SuccessIndicator)";
-
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
-                        {
-                            cmd.Parameters.AddWithValue("@StudentID", exit.StudentID);
-                            cmd.Parameters.AddWithValue("@ExitReason", exit.ExitReason ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@ExitReasonNumeric", exit.ExitReasonNumeric);
-                            cmd.Parameters.AddWithValue("@ExitDate", exit.ExitDate);
-                            cmd.Parameters.AddWithValue("@LengthOfStay", exit.LengthOfStay);
-                            cmd.Parameters.AddWithValue("@ExitAcademicLevel", exit.ExitAcademicLevel ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@ExitAcademicLevelNumeric", exit.ExitAcademicLevelNumeric);
-                            cmd.Parameters.AddWithValue("@ExitSocialSkillsLevel", exit.ExitSocialSkillsLevel ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@ExitSocialSkillsLevelNumeric", exit.ExitSocialSkillsLevelNumeric);
-                            cmd.Parameters.AddWithValue("@AcademicImprovement", exit.AcademicImprovement);
-                            cmd.Parameters.AddWithValue("@SocialSkillsImprovement", exit.SocialSkillsImprovement);
-                            cmd.Parameters.AddWithValue("@OverallImprovementScore", exit.OverallImprovementScore);
-                            cmd.Parameters.AddWithValue("@ProgramEffectivenessScore", exit.ProgramEffectivenessScore);
-                            cmd.Parameters.AddWithValue("@SuccessIndicator", exit.SuccessIndicator);
-
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-
-                    lblStatus.Text = $"Generated data loaded successfully. " +
-                                   $"Profiles: {generatedProfiles.Count}, " +
-                                   $"Intake: {generatedIntake.Count}, " +
-                                   $"Behaviors: {generatedBehavior.Count}, " +
-                                   $"Exits: {generatedExitData.Count}";
-                }
+                lblStatus.Text = $"✅ Saved {DataGenerationUtils.GeneratedProfiles.Count} students to DB.";
+                progressBar.Value = 100;
             }
             catch (Exception ex)
             {
-                lblStatus.Text = $"Error loading data: {ex.Message}";
-                MessageBox.Show($"Failed to load data into database:\n\n{ex.Message}", "Database Error",
-                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Failed to save to database: {ex.Message}");
+                lblStatus.Text = "❌ Save failed.";
             }
-*/
- 
+        }
 
 
 
@@ -620,13 +443,7 @@ namespace BridgeVueApp
                     writer.WriteLine($"  - Temporal features (day/week in program)");
                 }
 
-/*
-                // Optionally create a combined ML-ready dataset
-                CreateMLReadyDataset(folderPath);
 
-                // Display formatted summary in status label
-                DisplayExportSummaryInStatus(folderPath);
-*/
 
                 // Show success message with option to open folder
                 DialogResult result = MessageBox.Show($"Data successfully exported to:\n{folderPath}\n\nWould you like to open the folder?",
@@ -647,252 +464,7 @@ namespace BridgeVueApp
             }
  
         }
-/*
 
-        // Display formatted export summary in the status label
-        private void DisplayExportSummaryInStatus(string folderPath)
-        {
-
-            try
-            {
-                string folderName = Path.GetFileName(folderPath);
-                int currentStudents = generatedProfiles.Count - generatedExitData.Count;
-                int exitedStudents = generatedExitData.Count;
-                int totalBehaviorDays = generatedBehavior.Count;
-                double avgDaysPerStudent = totalBehaviorDays > 0 ? (double)totalBehaviorDays / generatedProfiles.Count : 0;
-
-                // Create a nicely formatted status message
-                var statusMessage = new StringBuilder();
-                statusMessage.AppendLine("EXPORT COMPLETE");
-                statusMessage.AppendLine($"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC | 👤 {Environment.UserName}");
-                statusMessage.AppendLine($"Folder: {folderName}");
-                statusMessage.AppendLine("");
-                statusMessage.AppendLine("RECORD SUMMARY:");
-                statusMessage.AppendLine($"   Students: {generatedProfiles.Count:N0} ({currentStudents:N0} current, {exitedStudents:N0} exited)");
-                statusMessage.AppendLine($"   Intake Records: {generatedIntake.Count:N0}");
-                statusMessage.AppendLine($"   Behavior Records: {generatedBehavior.Count:N0} ({avgDaysPerStudent:F1} avg days/student)");
-                statusMessage.AppendLine($"   Exit Records: {generatedExitData.Count:N0}");
-                statusMessage.AppendLine("");
-                statusMessage.AppendLine("FILES CREATED:");
-                statusMessage.AppendLine("   • StudentProfile.csv (Demographics + Numeric)");
-                statusMessage.AppendLine("   • IntakeData.csv (Assessments + ML Features)");
-                statusMessage.AppendLine("   • DailyBehavior.csv (Tracking + ML Metrics)");
-                statusMessage.AppendLine("   • ExitData.csv (Outcomes + Improvements)");
-                statusMessage.AppendLine("   • MLReadyDataset.csv (Combined for ML Training)");
-                statusMessage.AppendLine("   • BehavioralAggregates.csv (Trend Analysis)");
-                statusMessage.AppendLine("   • DataSummary.txt (Export Metadata)");
-
-                // Set the formatted text to the status label
-                lblStatus.Text = statusMessage.ToString().TrimEnd();
-
-                // If you want to make the status label more readable, you might also want to:
-                // 1. Set the label to use a monospace font for better alignment
-                // 2. Increase the label size to accommodate more text
-                // 3. Enable word wrap or multi-line display
-
-                // Example of setting font (uncomment if desired):
-                lblStatus.Font = new Font("Consolas", 9F, FontStyle.Regular);
-                lblStatus.AutoSize = true;
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"Export Complete | Status display error: {ex.Message}";
-            }
-
-        }
-
-        // Alternative version with more compact formatting for smaller status labels
-        private void DisplayCompactExportSummaryInStatus(string folderPath)
-        {
-            try
-            {
-                string folderName = Path.GetFileName(folderPath);
-                int currentStudents = generatedProfiles.Count - generatedExitData.Count;
-
-                var compactMessage = new StringBuilder();
-                compactMessage.AppendLine($"✅ Export Complete - {DateTime.UtcNow:HH:mm:ss} UTC");
-                compactMessage.AppendLine($"📁 {folderName}");
-                compactMessage.AppendLine($"👥 {generatedProfiles.Count} students ({currentStudents} current) | 📈 {generatedBehavior.Count} behaviors | 🚪 {generatedExitData.Count} exits");
-                compactMessage.AppendLine($"📄 7 files created (CSV + ML datasets + summary)");
-
-                lblStatus.Text = compactMessage.ToString().TrimEnd();
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"✅ Export Complete | ⚠️ {ex.Message}";
-            }
-        }
-
-        /*
-        // Even more compact single-line version
-        private void DisplaySingleLineExportStatus(string folderPath)
-        {
-            try
-            {
-                string folderName = Path.GetFileName(folderPath);
-                int currentStudents = generatedProfiles.Count - generatedExitData.Count;
-
-                lblStatus.Text = $"✅ Exported {generatedProfiles.Count} students ({currentStudents} current, {generatedExitData.Count} exited) " +
-                                $"→ {folderName} | {generatedBehavior.Count} behaviors | 7 files | {DateTime.UtcNow:HH:mm} UTC";
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"✅ Export Complete | Error: {ex.Message}";
-            }
-        }
-
-
-
-
-        // Create a combined dataset optimized for ML training
-        private void CreateMLReadyDataset(string folderPath)
-        {
-            try
-            {
-                var mlReadyData = from profile in generatedProfiles
-                                  join intake in generatedIntake on profile.StudentID equals intake.StudentID
-                                  join exit in generatedExitData on profile.StudentID equals exit.StudentID into exitGroup
-                                  from exit in exitGroup.DefaultIfEmpty()
-                                  select new
-                                  {
-                                      // Student Demographics (Numeric)
-                                      StudentID = profile.StudentID,
-                                      Age = profile.Age,
-                                      Grade = profile.Grade,
-                                      GenderNumeric = profile.GenderNumeric,
-                                      EthnicityNumeric = profile.EthnicityNumeric,
-                                      SpecialEd = profile.SpecialEd,
-                                      IEP = profile.IEP,
-
-                                      // Intake Factors (Numeric & Normalized)
-                                      EntryReasonNumeric = intake.EntryReasonNumeric,
-                                      PriorIncidents = intake.PriorIncidents,
-                                      OfficeReferrals = intake.OfficeReferrals,
-                                      Suspensions = intake.Suspensions,
-                                      Expulsions = intake.Expulsions,
-                                      EntryAcademicLevelNumeric = intake.EntryAcademicLevelNumeric,
-                                      EntrySocialSkillsLevelNumeric = intake.EntrySocialSkillsLevelNumeric,
-                                      RiskScore = intake.RiskScore,
-                                      StudentStressLevelNormalized = intake.StudentStressLevelNormalized,
-                                      FamilySupportNormalized = intake.FamilySupportNormalized,
-                                      AcademicAbilityNormalized = intake.AcademicAbilityNormalized,
-                                      EmotionalRegulationNormalized = intake.EmotionalRegulationNormalized,
-
-                                      // Support Services
-                                      CheckInOut = intake.CheckInOut,
-                                      StructuredRecess = intake.StructuredRecess,
-                                      StructuredBreaks = intake.StructuredBreaks,
-                                      SmallGroups = intake.SmallGroups,
-                                      SocialWorkerVisits = intake.SocialWorkerVisits,
-                                      PsychologistVisits = intake.PsychologistVisits,
-
-                                      // Outcome Variables (for students who have exited)
-                                      HasExited = exit != null ? 1 : 0,
-                                      LengthOfStay = exit?.LengthOfStay ?? 0,
-                                      ExitReasonNumeric = exit?.ExitReasonNumeric ?? 0,
-                                      ExitAcademicLevelNumeric = exit?.ExitAcademicLevelNumeric ?? 0,
-                                      ExitSocialSkillsLevelNumeric = exit?.ExitSocialSkillsLevelNumeric ?? 0,
-                                      AcademicImprovement = exit?.AcademicImprovement ?? 0,
-                                      SocialSkillsImprovement = exit?.SocialSkillsImprovement ?? 0,
-                                      OverallImprovementScore = exit?.OverallImprovementScore ?? 0,
-                                      ProgramEffectivenessScore = exit?.ProgramEffectivenessScore ?? 0,
-                                      SuccessIndicator = (exit != null && exit.SuccessIndicator) ? 1 : 0
-                                  };
-
-                using (var writer = new StreamWriter(Path.Combine(folderPath, "MLReadyDataset.csv")))
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    csv.WriteRecords(mlReadyData);
-                }
-
-                // Create behavioral aggregates for ML
-                CreateBehavioralAggregates(folderPath);
-            }
-            catch (Exception ex)
-            {
-                // Log but don't fail the main export
-                System.Diagnostics.Debug.WriteLine($"Error creating ML dataset: {ex.Message}");
-            }
-        }
-
-        // Create aggregated behavioral metrics for ML
-        private void CreateBehavioralAggregates(string folderPath)
-        {
-            try
-            {
-                var behavioralAggregates = generatedBehavior
-                    .GroupBy(b => b.StudentID)
-                    .Select(g => new
-                    {
-                        StudentID = g.Key,
-                        DaysInProgram = g.Count(),
-                        WeeksInProgram = g.Max(b => b.WeekInProgram),
-
-                        // Aggression Metrics
-                        TotalVerbalAggression = g.Sum(b => b.VerbalAggression),
-                        TotalPhysicalAggression = g.Sum(b => b.PhysicalAggression),
-                        AvgAggressionRisk = g.Average(b => b.AggressionRiskNormalized),
-                        AggressionTrend = CalculateTrend(g.Select(b => (double)b.VerbalAggression + b.PhysicalAggression).ToList()),
-
-                        // Engagement Metrics
-                        AvgAcademicEngagement = g.Average(b => b.AcademicEngagement),
-                        AvgEngagementLevel = g.Average(b => b.EngagementLevelNormalized),
-                        EngagementTrend = CalculateTrend(g.Select(b => (double)b.AcademicEngagement).ToList()),
-
-                        // Zone Metrics
-                        RedZoneDays = g.Count(b => b.ZoneOfRegulationNumeric == 1),
-                        YellowZoneDays = g.Count(b => b.ZoneOfRegulationNumeric == 2),
-                        BlueZoneDays = g.Count(b => b.ZoneOfRegulationNumeric == 3),
-                        GreenZoneDays = g.Count(b => b.ZoneOfRegulationNumeric == 4),
-                        AvgZoneScore = g.Average(b => b.ZoneOfRegulationNumeric),
-
-                        // Other Behavioral Metrics
-                        TotalElopements = g.Sum(b => b.Elopement),
-                        TotalWorkRefusals = g.Sum(b => b.WorkRefusal),
-                        AvgSocialInteractions = g.Average(b => b.SocialInteractions),
-                        AvgEmotionalRegulation = g.Average(b => b.EmotionalRegulation),
-
-                        // Progress Indicators
-                        FirstWeekAvgEngagement = g.Where(b => b.WeekInProgram == 1).Any() ?
-                            g.Where(b => b.WeekInProgram == 1).Average(b => b.AcademicEngagement) : 0,
-                        LastWeekAvgEngagement = g.GroupBy(b => b.WeekInProgram).OrderByDescending(w => w.Key)
-                            .FirstOrDefault()?.Average(b => b.AcademicEngagement) ?? 0
-                    });
-
-                using (var writer = new StreamWriter(Path.Combine(folderPath, "BehavioralAggregates.csv")))
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    csv.WriteRecords(behavioralAggregates);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error creating behavioral aggregates: {ex.Message}");
-            }
-        }
-
-        // Helper method to calculate trend (positive = improving, negative = declining)
-        private double CalculateTrend(List<double> values)
-        {
-            if (values.Count < 2) return 0;
-
-            // Simple linear regression slope
-            double n = values.Count;
-            double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
-            for (int i = 0; i < values.Count; i++)
-            {
-                sumX += i;
-                sumY += values[i];
-                sumXY += i * values[i];
-                sumX2 += i * i;
-            }
-
-            double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-            return slope;
-        }
-
-*/
 
         private void btnExitOutcomeCount_Click(object sender, EventArgs e)
         {
@@ -995,7 +567,14 @@ namespace BridgeVueApp
             
             }
         }
- 
+
+        private int ExtractPercentage(string status)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(status, @"(\d+)%");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int percent))
+                return percent;
+            return 0;
+        }
 
 
         private void btnLoadStudentProfile_Click(object sender, EventArgs e)

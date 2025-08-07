@@ -1,13 +1,22 @@
 ﻿// DataGenerationUtils.cs
+using System.Collections.Generic;
 using System;
 using System.Linq;
+using static BridgeVueApp.DataGeneration.SyntheticDataGenerator;
+using BridgeVueApp.Models;
 
 namespace BridgeVueApp.DataGeneration
 {
 
     public static class DataGenerationUtils
     {
+        // Hold generated data in memory
+        public static List<StudentProfile> GeneratedProfiles { get; set; } = new();
+        public static List<IntakeData> GeneratedIntake { get; set; } = new();
+        public static List<DailyBehavior> GeneratedBehavior { get; set; } = new();
+        public static List<ExitData> GeneratedExitData { get; set; } = new();
         public static ExitSummary LastExitSummary { get; set; } = new();
+
 
         public static int GetGenderNumeric(string gender) => gender switch
         {

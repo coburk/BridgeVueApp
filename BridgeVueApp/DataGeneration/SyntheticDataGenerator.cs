@@ -235,15 +235,44 @@ namespace BridgeVueApp.DataGeneration
             progress?.Report("Exit data generated.");
             return exitList;
         }
-    }
-    public class ExitSummary
-    {
-        public int Count { get; set; }
-        public float AvgImprovement { get; set; }
-        public float AvgEffectiveness { get; set; }
-        public float AvgAggression { get; set; }
-        public float AvgEngagement { get; set; }
-        public float AvgRedZonePercent { get; set; }
-    }
 
+
+        public static void GenerateSyntheticData(IProgress<string> progress)
+        {
+            progress?.Report("⏳ Starting synthetic data generation...");
+
+            var students = GenerateStudentProfiles(50, progress);
+            var intake = GenerateIntakeData(students, progress);
+            var behavior = GenerateDailyBehavior(students, intake, progress);
+            var exit = GenerateExitData(students, progress);
+
+            DataGenerationUtils.GeneratedProfiles = students;
+            DataGenerationUtils.GeneratedIntake = intake;
+            DataGenerationUtils.GeneratedBehavior = behavior;
+            DataGenerationUtils.GeneratedExitData = exit;
+
+            // Optional: compute summary and assign
+            DataGenerationUtils.LastExitSummary = new ExitSummary
+            {
+                Count = exit.Count,
+                AvgImprovement = exit.Average(e => e.OverallImprovementScore),
+                AvgEffectiveness = exit.Average(e => e.ProgramEffectivenessScore),
+                AvgAggression = exit.Average(e => e.OverallImprovementScore), // Replace with real aggression metric if tracked
+                AvgEngagement = exit.Average(e => e.ProgramEffectivenessScore), // Replace with real engagement metric
+                AvgRedZonePercent = 0f // Placeholder
+            };
+
+            progress?.Report("✅ Synthetic data generation completed successfully.");
+        }
+
+        public class ExitSummary
+        {
+            public int Count { get; set; }
+            public float AvgImprovement { get; set; }
+            public float AvgEffectiveness { get; set; }
+            public float AvgAggression { get; set; }
+            public float AvgEngagement { get; set; }
+            public float AvgRedZonePercent { get; set; }
+        }
+    }
 }

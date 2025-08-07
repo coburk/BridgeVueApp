@@ -43,6 +43,7 @@ namespace BridgeVueApp
             gbxGenerate = new GroupBox();
             btnSaveGeneratedCSV = new Button();
             btnLoadGeneratedData = new Button();
+            progressBar = new ProgressBar();
             gbxDatbase.SuspendLayout();
             gbxLoadData.SuspendLayout();
             gbxGenerate.SuspendLayout();
@@ -60,12 +61,15 @@ namespace BridgeVueApp
             // 
             // btnCreateDatabaseAndTables
             // 
-            btnCreateDatabaseAndTables.Location = new Point(15, 27);
+            btnCreateDatabaseAndTables.BackColor = SystemColors.ControlLight;
+            btnCreateDatabaseAndTables.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnCreateDatabaseAndTables.ForeColor = Color.Black;
+            btnCreateDatabaseAndTables.Location = new Point(15, 109);
             btnCreateDatabaseAndTables.Name = "btnCreateDatabaseAndTables";
-            btnCreateDatabaseAndTables.Size = new Size(192, 23);
+            btnCreateDatabaseAndTables.Size = new Size(192, 49);
             btnCreateDatabaseAndTables.TabIndex = 1;
-            btnCreateDatabaseAndTables.Text = "DROP / Create Database / Tables";
-            btnCreateDatabaseAndTables.UseVisualStyleBackColor = true;
+            btnCreateDatabaseAndTables.Text = "DELETE and Re-Create BridgeVue Database";
+            btnCreateDatabaseAndTables.UseVisualStyleBackColor = false;
             btnCreateDatabaseAndTables.Click += btnCreateDatabaseAndTables_Click;
             // 
             // btnLoadStudentProfile
@@ -89,7 +93,7 @@ namespace BridgeVueApp
             // 
             // btnViewDatabaseInfo
             // 
-            btnViewDatabaseInfo.Location = new Point(15, 62);
+            btnViewDatabaseInfo.Location = new Point(15, 22);
             btnViewDatabaseInfo.Name = "btnViewDatabaseInfo";
             btnViewDatabaseInfo.Size = new Size(192, 23);
             btnViewDatabaseInfo.TabIndex = 5;
@@ -143,7 +147,7 @@ namespace BridgeVueApp
             // 
             // btnExitOutcomeAvgs
             // 
-            btnExitOutcomeAvgs.Location = new Point(15, 128);
+            btnExitOutcomeAvgs.Location = new Point(15, 80);
             btnExitOutcomeAvgs.Name = "btnExitOutcomeAvgs";
             btnExitOutcomeAvgs.Size = new Size(192, 23);
             btnExitOutcomeAvgs.TabIndex = 7;
@@ -153,7 +157,7 @@ namespace BridgeVueApp
             // 
             // btnExitOutcomeCount
             // 
-            btnExitOutcomeCount.Location = new Point(15, 95);
+            btnExitOutcomeCount.Location = new Point(15, 51);
             btnExitOutcomeCount.Name = "btnExitOutcomeCount";
             btnExitOutcomeCount.Size = new Size(192, 23);
             btnExitOutcomeCount.TabIndex = 6;
@@ -207,11 +211,19 @@ namespace BridgeVueApp
             btnLoadGeneratedData.UseVisualStyleBackColor = true;
             btnLoadGeneratedData.Click += btnLoadGeneratedData_Click;
             // 
+            // progressBar
+            // 
+            progressBar.Location = new Point(280, 197);
+            progressBar.Name = "progressBar";
+            progressBar.Size = new Size(228, 23);
+            progressBar.TabIndex = 12;
+            // 
             // SetupForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(778, 567);
+            Controls.Add(progressBar);
             Controls.Add(gbxGenerate);
             Controls.Add(gbxLoadData);
             Controls.Add(gbxDatbase);
@@ -250,5 +262,6 @@ namespace BridgeVueApp
         private Button btnLoadGeneratedData;
         private Button btnExitOutcomeCount;
         private Button btnExitOutcomeAvgs;
+        private ProgressBar progressBar;
     }
 }
