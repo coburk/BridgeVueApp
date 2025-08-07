@@ -27,6 +27,7 @@ namespace BridgeVueApp
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SetupForm));
             lblSetup = new Label();
             btnCreateDatabaseAndTables = new Button();
             btnLoadStudentProfile = new Button();
@@ -216,6 +217,7 @@ namespace BridgeVueApp
             Controls.Add(gbxDatbase);
             Controls.Add(lblStatus);
             Controls.Add(lblSetup);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "SetupForm";
             Text = "BridgeVue Setup";
             Load += SetupForm_Load;

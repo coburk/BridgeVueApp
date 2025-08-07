@@ -18,15 +18,19 @@ namespace BridgeVueApp.Models
         public int InappropriateLanguage { get; set; }
         public int OutOfLane { get; set; }
         public string ZoneOfRegulation { get; set; }
-        public int ZoneOfRegulationNumeric { get; set; }
+        public int? ZoneOfRegulationNumeric { get; set; }
         public int AcademicEngagement { get; set; }
         public int SocialInteractions { get; set; }
         public int EmotionalRegulation { get; set; }
+        public DateTime? WeeklyEmotionDate { get; set; }
+        public string WeeklyEmotionPictogram { get; set; }
+        public int? WeeklyEmotionPictogramNumeric { get; set; }
         public float AggressionRiskNormalized { get; set; }
         public float EngagementLevelNormalized { get; set; }
         public int DayInProgram { get; set; }
         public int WeekInProgram { get; set; }
         public DateTime? CreatedDate { get; set; }
+        public string StaffComments { get; set; }
     }
 
 }

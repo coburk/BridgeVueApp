@@ -5,7 +5,19 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Resources\favicon.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="SetupForm - BeforeCleanup.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Resources\favicon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\favicon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Bogus" Version="35.6.3" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />

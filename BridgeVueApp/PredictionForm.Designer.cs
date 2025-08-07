@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PredictionForm));
             btnRandomStudentPredict = new Button();
             tabControl1 = new TabControl();
             tabRandom = new TabPage();
@@ -584,6 +585,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(753, 527);
             Controls.Add(tabControl1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "PredictionForm";
             Text = "Student Predictions";
             Load += PredictionForm_Load;

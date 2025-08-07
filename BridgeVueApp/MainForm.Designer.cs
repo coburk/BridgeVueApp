@@ -31,6 +31,7 @@ namespace BridgeVueApp
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             menuStrip1 = new MenuStrip();
             adminToolStripMenuItem = new ToolStripMenuItem();
             predictionsToolStripMenuItem = new ToolStripMenuItem();
@@ -340,7 +341,7 @@ namespace BridgeVueApp
             tblZoneColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tblZoneColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tblZoneColors.Location = new Point(26, 248);
-            tblZoneColors.Margin = new Padding(2, 2, 2, 2);
+            tblZoneColors.Margin = new Padding(2);
             tblZoneColors.Name = "tblZoneColors";
             tblZoneColors.RowCount = 1;
             tblZoneColors.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -398,6 +399,7 @@ namespace BridgeVueApp
             Controls.Add(lblDailyBehaviorEntry);
             Controls.Add(pbxLogo);
             Controls.Add(menuStrip1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
             Text = "BridgeVue";

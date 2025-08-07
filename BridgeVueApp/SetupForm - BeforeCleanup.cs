@@ -7,17 +7,22 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using Bogus;
-using BridgeVueApp;
 using BridgeVueApp.Models;
-
-
-
 
 
 namespace BridgeVueApp
 {
     public partial class SetupForm : Form
     {
+        // Configurable Names
+        private string dbName = "BridgeVue";
+        private string tableStudentProfile = "StudentProfile";
+        private string tableIntakeData = "IntakeData";
+        private string tableDailyBehavior = "DailyBehavior";
+        private string tableExitData = "ExitData";
+
+        private string connectionString => "Server=localhost;Integrated Security=true;TrustServerCertificate=True;";
+        private string dbConnection => $"Server=localhost;Database={dbName};Integrated Security=true;TrustServerCertificate=True;";
 
         // In-memory Data
         private List<StudentProfile> generatedProfiles = new List<StudentProfile>();
@@ -50,9 +55,9 @@ namespace BridgeVueApp
                 lblStatus.Text = "Retrieving database information...";
                 Application.DoEvents();
 
-                using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
+                using (SqlConnection conn = new SqlConnection(dbConnection))
                 {
-                    dbConnection.Open();
+                    conn.Open();
 
                     // Get table row counts
                     string tableQuery = @"
@@ -75,7 +80,7 @@ namespace BridgeVueApp
                     (SELECT COUNT(*) FROM sys.views WHERE is_ms_shipped = 0) AS ViewCount,
                     (SELECT COUNT(*) FROM sys.indexes WHERE object_id IN (SELECT object_id FROM sys.tables WHERE is_ms_shipped = 0)) AS IndexCount";
 
-                    SqlCommand dbInfoCmd = new SqlCommand(dbInfoQuery, dbConnection);
+                    SqlCommand dbInfoCmd = new SqlCommand(dbInfoQuery, conn);
                     SqlDataReader dbInfoReader = dbInfoCmd.ExecuteReader();
 
                     string databaseName = "";
@@ -91,7 +96,7 @@ namespace BridgeVueApp
                     dbInfoReader.Close();
 
                     // Get table row counts
-                    SqlCommand cmd = new SqlCommand(tableQuery, dbConnection);
+                    SqlCommand cmd = new SqlCommand(tableQuery, conn);
                     SqlDataReader reader = cmd.ExecuteReader();
 
                     StringBuilder result = new StringBuilder();
@@ -137,7 +142,7 @@ namespace BridgeVueApp
                     {
                         result.AppendLine("");
                         result.AppendLine("DATA INSIGHTS:");
-                        AddDataInsights(dbConnection, result, tableData); // Use dbConnection for data insights
+                        AddDataInsights(conn, result, tableData);
                     }
 
                     result.AppendLine("");
@@ -219,9 +224,9 @@ namespace BridgeVueApp
         {
             try
             {
-                using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
+                using (SqlConnection conn = new SqlConnection(dbConnection))
                 {
-                    dbConnection.Open();
+                    conn.Open();
                     string query = @"
                 SELECT t.NAME AS TableName, SUM(p.rows) AS [RowCount]
                 FROM sys.tables t
@@ -230,7 +235,7 @@ namespace BridgeVueApp
                 WHERE t.is_ms_shipped = 0 AND i.type <= 1
                 GROUP BY t.NAME ORDER BY t.NAME;";
 
-                    SqlCommand cmd = new SqlCommand(query, dbConnection);
+                    SqlCommand cmd = new SqlCommand(query, conn);
                     SqlDataReader reader = cmd.ExecuteReader();
 
                     var counts = new List<string>();
@@ -254,7 +259,7 @@ namespace BridgeVueApp
                         counts.Add($"{shortName}:{rowCount:N0}");
                     }
 
-                    lblStatus.Text = $"Database: {DatabaseConfig.DbName} | {string.Join(" | ", counts)} | Total:{totalRows:N0} | {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
+                    lblStatus.Text = $"Database: {dbName} | {string.Join(" | ", counts)} | Total:{totalRows:N0} | {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
                 }
             }
             catch (Exception ex)
@@ -262,6 +267,13 @@ namespace BridgeVueApp
                 lblStatus.Text = $"Database info error: {ex.Message}";
             }
         }
+
+
+
+
+
+
+
 
 
 
@@ -282,55 +294,614 @@ namespace BridgeVueApp
 
 
 
-
         // Generate Synthetic Student Data
         private async void btnGenerateSyntheticData_Click(object sender, EventArgs e)
         {
-        }
-/*
             // Disable the button to prevent multiple clicks
             btnGenerateSyntheticData.Enabled = false;
             btnLoadGeneratedData.Enabled = false;
             btnSaveGeneratedCSV.Enabled = false;
 
+            try
+            {
+                // Show initial status
+                lblStatus.Text = "Initializing synthetic data generation...";
+                Application.DoEvents();
+
+                // Run the generation on a background thread with progress reporting
+                var progress = new Progress<string>(message =>
+                {
+                    lblStatus.Text = message;
+                    Application.DoEvents();
+                });
+
+                await Task.Run(() => GenerateSyntheticDataWithProgress(progress));
+
+                // Show completion status
+                DisplayGenerationSummaryInStatus();
+            }
+            catch (Exception ex)
+            {
+                lblStatus.Text = $"Generation Failed: {ex.Message}";
+                MessageBox.Show($"Failed to generate synthetic data:\n\n{ex.Message}", "Generation Error",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Re-enable buttons
+                btnGenerateSyntheticData.Enabled = true;
+                btnLoadGeneratedData.Enabled = true;
+                btnSaveGeneratedCSV.Enabled = true;
+            }
         }
-        
-                    try
-                    {
-                        // Show initial status
-                        lblStatus.Text = "Initializing synthetic data generation...";
-                        Application.DoEvents();
 
-                        // Run the generation on a background thread with progress reporting
-                        var progress = new Progress<string>(message =>
-                        {
-                            lblStatus.Text = message;
-                            Application.DoEvents();
-                        });
+        private void GenerateSyntheticDataWithProgress(IProgress<string> progress)
+        {
+            Random rand = new Random();
+            generatedProfiles.Clear();
+            generatedIntake.Clear();
+            generatedBehavior.Clear();
+            generatedExitData.Clear();
 
-                        await Task.Run(() => GenerateSyntheticDataWithProgress(progress));
+            // Set the number of students to generate
+            int numStudents = 50;
 
-                        // Show completion status
-                        DisplayGenerationSummaryInStatus();
-                    }
-                    catch (Exception ex)
-                    {
-                        lblStatus.Text = $"Generation Failed: {ex.Message}";
-                        MessageBox.Show($"Failed to generate synthetic data:\n\n{ex.Message}", "Generation Error",
-                                       MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    finally
- 
-                    {
-                        // Re-enable buttons
-                        btnGenerateSyntheticData.Enabled = true;
-                        btnLoadGeneratedData.Enabled = true;
-                        btnSaveGeneratedCSV.Enabled = true;
-                    }
+            progress?.Report($"Generating data for {numStudents} students...");
+
+            for (int studentId = 1; studentId <= numStudents; studentId++)
+            {
+                // Report progress every few students
+                if (studentId % 5 == 0 || studentId == 1)
+                {
+                    int percentComplete = (int)((double)studentId / numStudents * 30); // 30% for student setup
+                    progress?.Report($"Creating student {studentId}/{numStudents} ({percentComplete}% complete)");
                 }
 
-      */         
-        
+                // Create student baseline characteristics that influence everything
+                double studentStressLevel = GenerateNormalRandom(rand, 0.5, 0.2);
+                double familySupport = GenerateNormalRandom(rand, 0.6, 0.25);
+                double academicAbility = GenerateNormalRandom(rand, 0.5, 0.2);
+                double emotionalRegulationCapacity = GenerateNormalRandom(rand, 0.5, 0.2);
+
+                int grade = rand.Next(0, 6);
+                int age = grade + rand.Next(5, 8);
+                double ageMaturityFactor = Math.Min(1.0, age / 18.0);
+
+                bool hasSpecialNeeds = rand.NextDouble() < 0.15;
+                bool hasIEP = hasSpecialNeeds && rand.NextDouble() < 0.8;
+
+                string gender = rand.NextDouble() > 0.5 ? "Male" : "Female";
+                string[] ethnicities = { "White", "Black", "Hispanic", "Asian", "Other" };
+                string ethnicity = ethnicities[rand.Next(ethnicities.Length)];
+
+                generatedProfiles.Add(new StudentProfile
+                {
+                    StudentID = studentId,
+                    Grade = grade,
+                    Age = age,
+                    Gender = gender,
+                    GenderNumeric = GetGenderNumeric(gender),
+                    Ethnicity = ethnicity,
+                    EthnicityNumeric = GetEthnicityNumeric(ethnicity),
+                    SpecialEd = hasSpecialNeeds ? 1 : 0,
+                    IEP = hasIEP ? 1 : 0
+                });
+
+                DateTime entryDate = DateTime.Now.AddDays(-rand.Next(30, 120));
+                double riskFactor = (1 - familySupport) * 0.4 + studentStressLevel * 0.4 + (hasSpecialNeeds ? 0.2 : 0);
+
+                int priorIncidents = Math.Min(10, (int)(riskFactor * 8 + GenerateNormalRandom(rand, 0, 1)));
+                int officeReferrals = Math.Min(5, (int)(riskFactor * 4 + GenerateNormalRandom(rand, 0, 0.5)));
+                int suspensions = Math.Min(3, (int)(riskFactor * 3 + GenerateNormalRandom(rand, 0, 0.5)));
+
+                string academicLevel = academicAbility > 0.7 ? "Above Grade" :
+                                      academicAbility > 0.3 ? "At Grade" : "Below Grade";
+
+                double socialSkillsScore = (emotionalRegulationCapacity * 0.6 + familySupport * 0.4);
+                string socialSkillsLevel = socialSkillsScore > 0.6 ? "High" :
+                                          socialSkillsScore > 0.3 ? "Medium" : "Low";
+
+                string entryReason = GetWeightedEntryReason(rand, studentStressLevel, emotionalRegulationCapacity);
+
+                generatedIntake.Add(new IntakeData
+                {
+                    IntakeID = 0,
+                    StudentID = studentId,
+                    EntryReason = entryReason,
+                    EntryReasonNumeric = GetEntryReasonNumeric(entryReason),
+                    PriorIncidents = Math.Max(0, priorIncidents),
+                    OfficeReferrals = Math.Max(0, officeReferrals),
+                    Suspensions = Math.Max(0, suspensions),
+                    Expulsions = riskFactor > 0.8 && rand.NextDouble() < 0.3 ? 1 : 0,
+                    EntryAcademicLevel = academicLevel,
+                    EntryAcademicLevelNumeric = GetAcademicLevelNumeric(academicLevel),
+                    CheckInOut = riskFactor > 0.5 ? 1 : 0,
+                    StructuredRecess = (hasSpecialNeeds || riskFactor > 0.4) ? 1 : 0,
+                    StructuredBreaks = (hasSpecialNeeds || emotionalRegulationCapacity < 0.4) ? 1 : 0,
+                    SmallGroups = hasSpecialNeeds || academicAbility < 0.4 ? rand.Next(1, 3) : rand.Next(0, 2),
+                    SocialWorkerVisits = (int)(riskFactor * 3) + rand.Next(0, 2),
+                    PsychologistVisits = hasSpecialNeeds || emotionalRegulationCapacity < 0.3 ? rand.Next(1, 3) : rand.Next(0, 1),
+                    EntrySocialSkillsLevel = socialSkillsLevel,
+                    EntrySocialSkillsLevelNumeric = GetSocialSkillsLevelNumeric(socialSkillsLevel),
+                    EntryDate = entryDate,
+                    RiskScore = Math.Min(10, Math.Max(1, (int)(riskFactor * 9) + 1)),
+                    StudentStressLevelNormalized = Math.Max(0, Math.Min(1, studentStressLevel)),
+                    FamilySupportNormalized = Math.Max(0, Math.Min(1, familySupport)),
+                    AcademicAbilityNormalized = Math.Max(0, Math.Min(1, academicAbility)),
+                    EmotionalRegulationNormalized = Math.Max(0, Math.Min(1, emotionalRegulationCapacity))
+                });
+
+                // Generate behavioral data with progress reporting
+                progress?.Report($"Generating behavior data for student {studentId}...");
+
+                int behaviorDays = rand.Next(30, 91);
+                int totalAggression = 0;
+                int totalEngagement = 0;
+                int redZoneDays = 0;
+
+                double currentAggressionTrend = studentStressLevel * 0.7 + (1 - emotionalRegulationCapacity) * 0.3;
+                double currentEngagementTrend = academicAbility * 0.5 + familySupport * 0.3 + emotionalRegulationCapacity * 0.2;
+
+                double programEffectiveness = GenerateNormalRandom(rand, 0.6, 0.2);
+                double improvementRate = programEffectiveness * 0.02;
+
+                for (int day = 0; day < behaviorDays; day++)
+                {
+                    // Report progress for behavior generation (less frequently)
+                    if (day % 10 == 0 && studentId % 10 == 0)
+                    {
+                        int overallPercent = 30 + (int)((double)studentId / numStudents * 50); // 30-80% range
+                        progress?.Report($"Day {day + 1}/{behaviorDays} for student {studentId} ({overallPercent}% complete)");
+                    }
+
+                    double dayProgress = day / (double)behaviorDays;
+                    currentAggressionTrend = Math.Max(0, currentAggressionTrend - (improvementRate * dayProgress));
+                    currentEngagementTrend = Math.Min(1, currentEngagementTrend + (improvementRate * dayProgress * 0.5));
+
+                    double weeklyFactor = 1.0 + 0.2 * Math.Sin((day % 7) * Math.PI / 7);
+                    double dailyVariation = GenerateNormalRandom(rand, 0, 0.1);
+
+                    double todayAggressionRisk = Math.Max(0, Math.Min(1, currentAggressionTrend * weeklyFactor + dailyVariation));
+                    double todayEngagementLevel = Math.Max(0, Math.Min(1, currentEngagementTrend * weeklyFactor - dailyVariation));
+
+                    int verbalAggression = rand.NextDouble() < todayAggressionRisk * 0.3 ? 1 : 0;
+                    int physicalAggression = rand.NextDouble() < todayAggressionRisk * 0.15 ? 1 : 0;
+                    int academicEngagement = Math.Max(1, Math.Min(5, (int)(todayEngagementLevel * 4) + 1 + rand.Next(-1, 2)));
+
+                    string zone = GetZoneBasedOnBehavior(todayAggressionRisk, todayEngagementLevel, rand);
+                    string emotion = day % 7 == 0 ? GetEmotionBasedOnBehavior(todayAggressionRisk, todayEngagementLevel, rand) : string.Empty;
+
+                    totalAggression += verbalAggression + physicalAggression;
+                    totalEngagement += academicEngagement;
+                    if (zone == "Red") redZoneDays++;
+
+                    int socialInteractions = Math.Max(1, Math.Min(5, (int)(socialSkillsScore * 4) + 1 + rand.Next(-1, 2)));
+                    int emotionalRegulation = Math.Max(1, Math.Min(5, (int)(emotionalRegulationCapacity * 4) + 1 + rand.Next(-1, 2)));
+
+                    generatedBehavior.Add(new DailyBehavior
+                    {
+                        StudentID = studentId,
+                        Timestamp = entryDate.AddDays(day),
+                        Level = Math.Max(1, Math.Min(6, (int)(todayEngagementLevel * 5) + 1)),
+                        Step = Math.Max(1, Math.Min(6, (int)((1 - todayAggressionRisk) * 5) + 1)),
+                        VerbalAggression = verbalAggression,
+                        PhysicalAggression = physicalAggression,
+                        Elopement = rand.NextDouble() < todayAggressionRisk * 0.1 ? 1 : 0,
+                        OutOfSpot = rand.NextDouble() < (1 - todayEngagementLevel) * 0.3 ? 1 : 0,
+                        WorkRefusal = rand.NextDouble() < (1 - todayEngagementLevel) * 0.4 ? 1 : 0,
+                        ProvokingPeers = rand.NextDouble() < todayAggressionRisk * 0.2 ? 1 : 0,
+                        InappropriateLanguage = rand.NextDouble() < todayAggressionRisk * 0.25 ? 1 : 0,
+                        OutOfLane = rand.NextDouble() < (1 - emotionalRegulationCapacity) * 0.3 ? 1 : 0,
+                        ZoneOfRegulation = zone,
+                        ZoneOfRegulationNumeric = GetZoneNumeric(zone),
+                        AcademicEngagement = academicEngagement,
+                        SocialInteractions = socialInteractions,
+                        EmotionalRegulation = emotionalRegulation,
+                        StaffComments = string.Empty,
+                        WeeklyEmotionDate = day % 7 == 0 ? (DateTime?)entryDate.AddDays(day) : null,
+                        WeeklyEmotionPictogram = emotion,
+                        WeeklyEmotionPictogramNumeric = !string.IsNullOrEmpty(emotion) ? GetEmotionNumeric(emotion) : (int?)null,
+                        AggressionRiskNormalized = todayAggressionRisk,
+                        EngagementLevelNormalized = todayEngagementLevel,
+                        DayInProgram = day + 1,
+                        WeekInProgram = (day / 7) + 1
+                    });
+                }
+
+                // Generate exit data
+                progress?.Report($"Calculating outcomes for student {studentId}...");
+
+                double avgAggression = (double)totalAggression / behaviorDays;
+                double avgEngagement = (double)totalEngagement / behaviorDays;
+                double redZonePercent = (double)redZoneDays / behaviorDays;
+                double improvementScore = currentEngagementTrend - (academicAbility * 0.5 + familySupport * 0.3 + emotionalRegulationCapacity * 0.2);
+
+                if (rand.NextDouble() >= 0.15) // 85% have exit data
+                {
+                    string likelyOutcome = PredictOutcome(avgAggression, avgEngagement, redZonePercent,
+                                                        improvementScore, riskFactor, programEffectiveness,
+                                                        familySupport, behaviorDays, rand);
+
+                    int lengthOfStay = CalculateLengthOfStay(likelyOutcome, improvementScore, riskFactor, rand);
+                    DateTime exitDate = entryDate.AddDays(lengthOfStay);
+
+                    string exitAcademicLevel = CalculateExitAcademicLevel(academicLevel, improvementScore, rand);
+                    string exitSocialSkillsLevel = CalculateExitSocialSkillsLevel(socialSkillsLevel, improvementScore, rand);
+
+                    generatedExitData.Add(new ExitData
+                    {
+                        ExitID = 0,
+                        StudentID = studentId,
+                        ExitReason = likelyOutcome,
+                        ExitReasonNumeric = GetExitReasonNumeric(likelyOutcome),
+                        ExitDate = exitDate,
+                        LengthOfStay = lengthOfStay,
+                        ExitAcademicLevel = exitAcademicLevel,
+                        ExitAcademicLevelNumeric = GetAcademicLevelNumeric(exitAcademicLevel),
+                        ExitSocialSkillsLevel = exitSocialSkillsLevel,
+                        ExitSocialSkillsLevelNumeric = GetSocialSkillsLevelNumeric(exitSocialSkillsLevel),
+                        AcademicImprovement = GetAcademicLevelNumeric(exitAcademicLevel) - GetAcademicLevelNumeric(academicLevel),
+                        SocialSkillsImprovement = GetSocialSkillsLevelNumeric(exitSocialSkillsLevel) - GetSocialSkillsLevelNumeric(socialSkillsLevel),
+                        OverallImprovementScore = improvementScore,
+                        ProgramEffectivenessScore = programEffectiveness,
+                        SuccessIndicator = GetSuccessIndicator(likelyOutcome)
+                    });
+                }
+            }
+
+            progress?.Report("Finalizing synthetic data generation...");
+        }
+
+        // Display generation summary in status
+        private void DisplayGenerationSummaryInStatus()
+        {
+            try
+            {
+                int currentStudents = generatedProfiles.Count - generatedExitData.Count;
+                int totalBehaviorDays = generatedBehavior.Count;
+                double avgDaysPerStudent = totalBehaviorDays > 0 ? (double)totalBehaviorDays / generatedProfiles.Count : 0;
+
+                var statusMessage = new StringBuilder();
+                statusMessage.AppendLine("GENERATION COMPLETE");
+                statusMessage.AppendLine($"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC | {Environment.UserName}");
+                statusMessage.AppendLine("");
+                statusMessage.AppendLine("SYNTHETIC DATA CREATED:");
+                statusMessage.AppendLine($"   Students: {generatedProfiles.Count:N0} ({currentStudents:N0} current, {generatedExitData.Count:N0} exited)");
+                statusMessage.AppendLine($"   Intake Records: {generatedIntake.Count:N0}");
+                statusMessage.AppendLine($"   Behavior Records: {generatedBehavior.Count:N0} ({avgDaysPerStudent:F1} avg days/student)");
+                statusMessage.AppendLine($"   Exit Records: {generatedExitData.Count:N0}");
+                statusMessage.AppendLine("");
+                statusMessage.AppendLine("FEATURES GENERATED:");
+                statusMessage.AppendLine("   • Realistic correlations & behavioral patterns");
+                statusMessage.AppendLine("   • Text + numeric equivalents for all categories");
+                statusMessage.AppendLine("   • Normalized ML features & improvement metrics");
+                statusMessage.AppendLine("   • Temporal trends & program effectiveness scores");
+                statusMessage.AppendLine("");
+                statusMessage.AppendLine("Ready for database loading or CSV export");
+
+                lblStatus.Text = statusMessage.ToString().TrimEnd();
+            }
+            catch (Exception ex)
+            {
+                lblStatus.Text = $"Data Generation Complete | Status display error: {ex.Message}";
+            }
+        }
+
+        // Compact version for smaller status labels
+        private void DisplayCompactGenerationStatus()
+        {
+            try
+            {
+                int currentStudents = generatedProfiles.Count - generatedExitData.Count;
+
+                lblStatus.Text = $"Generated {generatedProfiles.Count} students ({currentStudents} current, {generatedExitData.Count} exited) " +
+                                $"| {generatedBehavior.Count} behaviors | Ready for export/loading | 2025-07-24 05:50:34 UTC";
+            }
+            catch (Exception ex)
+            {
+                lblStatus.Text = $"Data Generation Complete | Error: {ex.Message}";
+            }
+        }
+
+
+
+
+
+        // Helper methods for more realistic data generation
+
+
+        // Numeric conversion methods for categorical data
+
+        // Get numeric gender for intake data
+        private int GetGenderNumeric(string gender)
+        {
+            return gender switch
+            {
+                "Male" => 1,
+                "Female" => 2,
+                _ => 0
+            };
+        }
+
+        // Get numeric ethnicity for intake data
+        private int GetEthnicityNumeric(string ethnicity)
+        {
+            return ethnicity switch
+            {
+                "White" => 1,
+                "Black" => 2,
+                "Hispanic" => 3,
+                "Asian" => 4,
+                "Other" => 5,
+                _ => 0
+            };
+        }
+
+        // Get numeric entry reason for intake data
+        private int GetEntryReasonNumeric(string reason)
+        {
+            return reason switch
+            {
+                "Aggression" => 1,
+                "Anxiety" => 2,
+                "Trauma" => 3,
+                "Withdrawn" => 4,
+                "Disruptive" => 5,
+                "Other" => 6,
+                _ => 0
+            };
+        }
+
+        // Get numeric academic level
+        private int GetAcademicLevelNumeric(string level)
+        {
+            return level switch
+            {
+                "Below Grade" => 1,
+                "At Grade" => 2,
+                "Above Grade" => 3,
+                _ => 0
+            };
+        }
+
+        // Get numeric social skills level
+        private int GetSocialSkillsLevelNumeric(string level)
+        {
+            return level switch
+            {
+                "Low" => 1,
+                "Medium" => 2,
+                "High" => 3,
+                _ => 0
+            };
+        }
+
+        // Get numeric zone for daily behavior
+        private int GetZoneNumeric(string zone)
+        {
+            return zone switch
+            {
+                "Green" => 4,    // Highest = best
+                "Blue" => 3,
+                "Yellow" => 2,
+                "Red" => 1,      // Lowest = worst
+                _ => 0
+            };
+        }
+
+        // Get numeric emotion for weekly emotion pictogram
+        private int GetEmotionNumeric(string emotion)
+        {
+            return emotion switch
+            {
+                "Happy" => 6,
+                "Excited" => 5,
+                "Nervous" => 4,
+                "Lonely" => 3,
+                "Sad" => 2,
+                "Angry" => 1,
+                _ => 0
+            };
+        }
+
+        // Get numeric exit reason for exit data
+        private int GetExitReasonNumeric(string reason)
+        {
+            return reason switch
+            {
+                "Returned Successfully" => 5,
+                "ACC" => 4,
+                "Transferred" => 3,
+                "ABS" => 2,
+                "Referred Out" => 1,
+                _ => 0
+            };
+        }
+
+        // Get success indicator based on exit reason
+        private int GetSuccessIndicator(string exitReason)
+        {
+            return exitReason switch
+            {
+                "Returned Successfully" => 1,
+                "ACC" => 1,
+                _ => 0
+            };
+        }
+
+        // Generate a normally distributed random number
+        private double GenerateNormalRandom(Random rand, double mean, double stdDev)
+        {
+            // Box-Muller transform for normal distribution
+            double u1 = 1.0 - rand.NextDouble();
+            double u2 = 1.0 - rand.NextDouble();
+            double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
+            return Math.Max(0, Math.Min(1, mean + stdDev * randStdNormal));
+        }
+
+        // Get a weighted random choice based on weights
+        private string GetWeightedEntryReason(Random rand, double stressLevel, double emotionalReg)
+        {
+            var reasons = new[] { "Aggression", "Anxiety", "Trauma", "Withdrawn", "Disruptive", "Other" };
+            var weights = new double[]
+            {
+        stressLevel * 0.8 + (1 - emotionalReg) * 0.2,        // Aggression
+        stressLevel * 0.6 + (1 - emotionalReg) * 0.4,        // Anxiety  
+        stressLevel * 0.7,                                   // Trauma
+        (1 - emotionalReg) * 0.5 + stressLevel * 0.3,        // Withdrawn
+        stressLevel * 0.5 + (1 - emotionalReg) * 0.5,        // Disruptive
+        0.1                                                  // Other
+            };
+
+            return GetWeightedChoice(rand, reasons, weights);
+        }
+
+        // Get Zone based on aggression risk and engagement level
+        private string GetZoneBasedOnBehavior(double aggressionRisk, double engagementLevel, Random rand)
+        {
+            if (aggressionRisk > 0.7) return "Red";
+            if (aggressionRisk > 0.4 || engagementLevel < 0.3) return "Yellow";
+            if (engagementLevel > 0.7 && aggressionRisk < 0.2) return "Green";
+            return "Blue";
+        }
+
+        // Get emotion based on aggression risk and engagement level
+        private string GetEmotionBasedOnBehavior(double aggressionRisk, double engagementLevel, Random rand)
+        {
+            var emotions = new[] { "Happy", "Sad", "Angry", "Lonely", "Nervous", "Excited" };
+            var weights = new double[]
+            {
+        engagementLevel * 0.8,          // Happy
+        (1 - engagementLevel) * 0.6,    // Sad
+        aggressionRisk * 0.9,           // Angry
+        (1 - engagementLevel) * 0.4,    // Lonely
+        aggressionRisk * 0.5,           // Nervous
+        engagementLevel * 0.6           // Excited
+            };
+
+            return GetWeightedChoice(rand, emotions, weights);
+        }
+
+        // Predict outcome based on multiple factors
+        private string PredictOutcome(double avgAggression, double avgEngagement, double redZonePercent,
+                            double improvementScore, double riskFactor, double programEffectiveness,
+                            double familySupport, int behaviorDays, Random rand)
+        {
+            // Calculate success probability based on multiple factors
+            double successScore = 0;
+
+            // Behavioral factors (40% weight)
+            successScore += (5 - avgEngagement) / 5 * 0.2;
+            successScore += Math.Max(0, 1 - avgAggression) * 0.1;
+            successScore += Math.Max(0, 1 - redZonePercent) * 0.1;
+
+            // Improvement factors (30% weight)
+            successScore += Math.Max(0, improvementScore) * 0.2;
+            successScore += programEffectiveness * 0.1;
+
+            // Support factors (20% weight)
+            successScore += familySupport * 0.15;
+            successScore += Math.Max(0, 1 - riskFactor) * 0.05;
+
+            // Time factors (10% weight)
+            successScore += Math.Min(1, behaviorDays / 60.0) * 0.1;
+
+            // Add some randomness
+            successScore += GenerateNormalRandom(rand, 0, 0.1);
+            successScore = Math.Max(0, Math.Min(1, successScore)); // Clamp to 0-1
+
+            // Attempted Realistic Balanced Distribution
+            double randomValue = rand.NextDouble();
+
+            // Determine outcome based on success score and randomness
+            if (successScore > 0.7)
+                return "Returned Successfully";                                 // ~35%
+
+            // High success scores - more likely to return successfully
+            if (successScore > 0.55)
+                return randomValue < 0.8 ? "Returned Successfully" : "ACC";     // Mix success + some ACC
+
+            // Moderate success scores - balanced outcomes
+            if (successScore > 0.4)
+                return randomValue < 0.3 ? "ACC" :
+                       randomValue < 0.6 ? "Transferred" : "Referred Out";      // Balanced middle
+
+            // Low to moderate success scores - more referrals and absconding
+            if (successScore > 0.3)
+                return randomValue < 0.2 ? "Transferred" :
+                       randomValue < 0.7 ? "Referred Out" : "ABS";              // More ABS opportunity
+
+            // Worst case scenarios - high risk of referral or absconding
+            return randomValue < 0.5 ? "Referred Out" : "ABS";                  // 50/50 split for worst cases
+        }
+
+
+        // Calculate length of stay based on outcome, improvement score, risk factor, and randomness
+        private int CalculateLengthOfStay(string outcome, double improvementScore, double riskFactor, Random rand)
+        {
+            int baseDays = outcome switch
+            {
+                "Returned Successfully" => 75,      // Successful completions take longer
+                "Referred Out" => 45,               // Unsuccessful shorter
+                "ABS" => 30,                        // Absconded early
+                "ACC" => 90,                        // Acute care longer
+                _ => 60                             // Default case for other outcomes     
+            };
+
+            // Adjust based on factors
+            double adjustment = improvementScore * 20 - riskFactor * 15;
+            return Math.Max(14, baseDays + (int)adjustment + rand.Next(-15, 15));
+        }
+
+
+        // Calculate exit academic levels based on entry levels and improvement scores
+        private string CalculateExitAcademicLevel(string entryLevel, double improvementScore, Random rand)
+        {
+            if (improvementScore > 0.3 && rand.NextDouble() < 0.4)
+            {
+                return entryLevel switch
+                {
+                    "Below Grade" => "At Grade",
+                    "At Grade" => rand.NextDouble() < 0.3 ? "Above Grade" : "At Grade",
+                    _ => entryLevel
+                };
+            }
+            return entryLevel; // Most students don't change academic level significantly
+        }
+
+        // Calculate exit social skills level based on entry level and improvement scores
+        private string CalculateExitSocialSkillsLevel(string entryLevel, double improvementScore, Random rand)
+        {
+            if (improvementScore > 0.2 && rand.NextDouble() < 0.6)
+            {
+                return entryLevel switch
+                {
+                    "Low" => "Medium",
+                    "Medium" => rand.NextDouble() < 0.4 ? "High" : "Medium",
+                    _ => entryLevel
+                };
+            }
+            return entryLevel;
+        }
+
+        // Get a weighted choice based on provided weights
+        private string GetWeightedChoice(Random rand, string[] choices, double[] weights)
+        {
+            double totalWeight = weights.Sum();
+            double randomValue = rand.NextDouble() * totalWeight;
+
+            double currentWeight = 0;
+            for (int i = 0; i < choices.Length; i++)
+            {
+                currentWeight += weights[i];
+                if (randomValue <= currentWeight)
+                    return choices[i];
+            }
+
+            return choices[choices.Length - 1];
+        }
+
+
 
 
 
@@ -339,9 +910,7 @@ namespace BridgeVueApp
 
         // Load Generated Data into Database
         private void btnLoadGeneratedData_Click(object sender, EventArgs e)
-{
-}
-/*
+        {
             DialogResult result = MessageBox.Show("Do you want to clear existing data tables before loading new data?\nClick Yes to truncate and reload all tables, No to append only new records.", "Data Load Option", MessageBoxButtons.YesNoCancel);
 
             if (result == DialogResult.Cancel)
@@ -352,20 +921,20 @@ namespace BridgeVueApp
 
             try
             {
-                using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
+                using (SqlConnection conn = new SqlConnection(dbConnection))
                 {
-                    dbConnection.Open();
+                    conn.Open();
 
                     if (result == DialogResult.Yes)
                     {
                         // Truncate tables in correct order (respecting foreign key constraints)
                         string truncateSql = $@"
-                    TRUNCATE TABLE {DatabaseConfig.TableExitData};
-                    TRUNCATE TABLE {DatabaseConfig.TableDailyBehavior}; 
-                    TRUNCATE TABLE {DatabaseConfig.TableIntakeData};
-                    TRUNCATE TABLE {DatabaseConfig.TableStudentProfile};";
+                    TRUNCATE TABLE {tableExitData};
+                    TRUNCATE TABLE {tableDailyBehavior}; 
+                    TRUNCATE TABLE {tableIntakeData};
+                    TRUNCATE TABLE {tableStudentProfile};";
 
-                        using (SqlCommand truncateCmd = new SqlCommand(truncateSql, dbConnection))
+                        using (SqlCommand truncateCmd = new SqlCommand(truncateSql, conn))
                         {
                             truncateCmd.ExecuteNonQuery();
                         }
@@ -376,15 +945,15 @@ namespace BridgeVueApp
                     foreach (var profile in generatedProfiles)
                     {
                         string query = $@"
-                IF NOT EXISTS (SELECT 1 FROM {DatabaseConfig.TableStudentProfile} WHERE StudentID = @StudentID)
+                IF NOT EXISTS (SELECT 1 FROM {tableStudentProfile} WHERE StudentID = @StudentID)
                 BEGIN
-                    INSERT INTO {DatabaseConfig.TableStudentProfile} (StudentID, FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
+                    INSERT INTO {tableStudentProfile} (StudentID, FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
                         Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed)
                     VALUES (@StudentID, @FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric, 
                         @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed)
                 END";
 
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
+                        using (SqlCommand cmd = new SqlCommand(query, conn))
                         {
                             cmd.Parameters.AddWithValue("@StudentID", profile.StudentID);
                             cmd.Parameters.AddWithValue("@FirstName", profile.FirstName ?? (object)DBNull.Value);
@@ -407,9 +976,9 @@ namespace BridgeVueApp
                     foreach (var intake in generatedIntake)
                     {
                         string query = $@"
-                IF NOT EXISTS (SELECT 1 FROM {DatabaseConfig.TableIntakeData} WHERE StudentID = @StudentID)
+                IF NOT EXISTS (SELECT 1 FROM {tableIntakeData} WHERE StudentID = @StudentID)
                 BEGIN
-                    INSERT INTO {DatabaseConfig.TableIntakeData} (StudentID, EntryReason, EntryReasonNumeric, PriorIncidents, 
+                    INSERT INTO {tableIntakeData} (StudentID, EntryReason, EntryReasonNumeric, PriorIncidents, 
                         OfficeReferrals, Suspensions, Expulsions, EntryAcademicLevel, EntryAcademicLevelNumeric,
                         CheckInOut, StructuredRecess, StructuredBreaks, SmallGroups, SocialWorkerVisits, 
                         PsychologistVisits, EntrySocialSkillsLevel, EntrySocialSkillsLevelNumeric, EntryDate, 
@@ -423,7 +992,7 @@ namespace BridgeVueApp
                         @EmotionalRegulationNormalized)
                 END";
 
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
+                        using (SqlCommand cmd = new SqlCommand(query, conn))
                         {
                             cmd.Parameters.AddWithValue("@StudentID", intake.StudentID);
                             cmd.Parameters.AddWithValue("@EntryReason", intake.EntryReason ?? (object)DBNull.Value);
@@ -456,7 +1025,7 @@ namespace BridgeVueApp
                     foreach (var behavior in generatedBehavior)
                     {
                         string query = $@"
-                INSERT INTO {DatabaseConfig.TableDailyBehavior} (StudentID, Timestamp, Level, Step, VerbalAggression, 
+                INSERT INTO {tableDailyBehavior} (StudentID, Timestamp, Level, Step, VerbalAggression, 
                     PhysicalAggression, Elopement, OutOfSpot, WorkRefusal, ProvokingPeers, InappropriateLanguage, 
                     OutOfLane, ZoneOfRegulation, ZoneOfRegulationNumeric, AcademicEngagement, SocialInteractions, 
                     EmotionalRegulation, StaffComments, WeeklyEmotionDate, WeeklyEmotionPictogram, 
@@ -469,7 +1038,7 @@ namespace BridgeVueApp
                     @WeeklyEmotionPictogramNumeric, @AggressionRiskNormalized, @EngagementLevelNormalized, 
                     @DayInProgram, @WeekInProgram)";
 
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
+                        using (SqlCommand cmd = new SqlCommand(query, conn))
                         {
                             cmd.Parameters.AddWithValue("@StudentID", behavior.StudentID);
                             cmd.Parameters.AddWithValue("@Timestamp", behavior.Timestamp);
@@ -489,14 +1058,16 @@ namespace BridgeVueApp
                             cmd.Parameters.AddWithValue("@SocialInteractions", behavior.SocialInteractions);
                             cmd.Parameters.AddWithValue("@EmotionalRegulation", behavior.EmotionalRegulation);
                             cmd.Parameters.AddWithValue("@StaffComments", behavior.StaffComments ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@WeeklyEmotionDate", behavior.WeeklyEmotionDate);
+                            cmd.Parameters.AddWithValue("@WeeklyEmotionDate", behavior.WeeklyEmotionDate.HasValue ?
+                                (object)behavior.WeeklyEmotionDate.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@WeeklyEmotionPictogram", behavior.WeeklyEmotionPictogram ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@WeeklyEmotionPictogramNumeric", behavior.WeeklyEmotionPictogramNumeric);
+                            cmd.Parameters.AddWithValue("@WeeklyEmotionPictogramNumeric", behavior.WeeklyEmotionPictogramNumeric.HasValue ?
+                                (object)behavior.WeeklyEmotionPictogramNumeric.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@AggressionRiskNormalized", behavior.AggressionRiskNormalized);
                             cmd.Parameters.AddWithValue("@EngagementLevelNormalized", behavior.EngagementLevelNormalized);
                             cmd.Parameters.AddWithValue("@DayInProgram", behavior.DayInProgram);
                             cmd.Parameters.AddWithValue("@WeekInProgram", behavior.WeekInProgram);
-                            cmd.Parameters.AddWithValue("@CreatedDate", behavior.CreatedDate);
+                            cmd.ExecuteNonQuery();
                         }
                     }
 
@@ -504,7 +1075,7 @@ namespace BridgeVueApp
                     foreach (var exit in generatedExitData)
                     {
                         string query = $@"
-                INSERT INTO {DatabaseConfig.TableExitData} (StudentID, ExitReason, ExitReasonNumeric, ExitDate, LengthOfStay, 
+                INSERT INTO {tableExitData} (StudentID, ExitReason, ExitReasonNumeric, ExitDate, LengthOfStay, 
                     ExitAcademicLevel, ExitAcademicLevelNumeric, ExitSocialSkillsLevel, ExitSocialSkillsLevelNumeric,
                     AcademicImprovement, SocialSkillsImprovement, OverallImprovementScore, ProgramEffectivenessScore,
                     SuccessIndicator)
@@ -513,7 +1084,7 @@ namespace BridgeVueApp
                     @AcademicImprovement, @SocialSkillsImprovement, @OverallImprovementScore, 
                     @ProgramEffectivenessScore, @SuccessIndicator)";
 
-                        using (SqlCommand cmd = new SqlCommand(query, dbConnection))
+                        using (SqlCommand cmd = new SqlCommand(query, conn))
                         {
                             cmd.Parameters.AddWithValue("@StudentID", exit.StudentID);
                             cmd.Parameters.AddWithValue("@ExitReason", exit.ExitReason ?? (object)DBNull.Value);
@@ -547,8 +1118,7 @@ namespace BridgeVueApp
                 MessageBox.Show($"Failed to load data into database:\n\n{ex.Message}", "Database Error",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-*/
- 
+        }
 
 
 
@@ -556,9 +1126,7 @@ namespace BridgeVueApp
 
         // Save Generated Data as CSVs
         private void btnSaveGeneratedCSV_Click(object sender, EventArgs e)
-{
-
-    
+        {
             try
             {
                 string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
@@ -620,13 +1188,11 @@ namespace BridgeVueApp
                     writer.WriteLine($"  - Temporal features (day/week in program)");
                 }
 
-/*
                 // Optionally create a combined ML-ready dataset
                 CreateMLReadyDataset(folderPath);
 
                 // Display formatted summary in status label
                 DisplayExportSummaryInStatus(folderPath);
-*/
 
                 // Show success message with option to open folder
                 DialogResult result = MessageBox.Show($"Data successfully exported to:\n{folderPath}\n\nWould you like to open the folder?",
@@ -645,14 +1211,11 @@ namespace BridgeVueApp
                 MessageBox.Show($"Failed to export CSV files:\n\n{ex.Message}", "Export Error",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
- 
         }
-/*
 
         // Display formatted export summary in the status label
         private void DisplayExportSummaryInStatus(string folderPath)
         {
-
             try
             {
                 string folderName = Path.GetFileName(folderPath);
@@ -698,7 +1261,6 @@ namespace BridgeVueApp
             {
                 lblStatus.Text = $"Export Complete | Status display error: {ex.Message}";
             }
-
         }
 
         // Alternative version with more compact formatting for smaller status labels
@@ -723,7 +1285,6 @@ namespace BridgeVueApp
             }
         }
 
-        /*
         // Even more compact single-line version
         private void DisplaySingleLineExportStatus(string folderPath)
         {
@@ -796,7 +1357,7 @@ namespace BridgeVueApp
                                       SocialSkillsImprovement = exit?.SocialSkillsImprovement ?? 0,
                                       OverallImprovementScore = exit?.OverallImprovementScore ?? 0,
                                       ProgramEffectivenessScore = exit?.ProgramEffectivenessScore ?? 0,
-                                      SuccessIndicator = (exit != null && exit.SuccessIndicator) ? 1 : 0
+                                      SuccessIndicator = exit?.SuccessIndicator ?? 0
                                   };
 
                 using (var writer = new StreamWriter(Path.Combine(folderPath, "MLReadyDataset.csv")))
@@ -892,7 +1453,7 @@ namespace BridgeVueApp
             return slope;
         }
 
-*/
+
 
         private void btnExitOutcomeCount_Click(object sender, EventArgs e)
         {
@@ -902,15 +1463,15 @@ namespace BridgeVueApp
             {
                 try
                 {
-                    using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
+                    using (SqlConnection conn = new SqlConnection(dbConnection))
                     {
-                        dbConnection.Open();
+                        conn.Open();
                         string query = @"
                         SELECT ExitReason, COUNT(*) AS NumStudents
                         FROM ExitData
                         GROUP BY ExitReason;";
 
-                        SqlCommand cmd = new SqlCommand(query, dbConnection);
+                        SqlCommand cmd = new SqlCommand(query, conn);
                         SqlDataReader reader = cmd.ExecuteReader();
 
                         // Use a StringBuilder for performance
@@ -948,9 +1509,9 @@ namespace BridgeVueApp
             {
                 try
                 {
-                    using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
+                    using (SqlConnection conn = new SqlConnection(dbConnection))
                     {
-                        dbConnection.Open();
+                        conn.Open();
                         string query = @"
                         SELECT ExitReason,
                             AVG(AvgVerbalAggression) AS AvgVerbal,
@@ -962,7 +1523,7 @@ namespace BridgeVueApp
                             ON v.StudentID = e.StudentID
                         GROUP BY ExitReason;";
 
-                        SqlCommand cmd = new SqlCommand(query, dbConnection);
+                        SqlCommand cmd = new SqlCommand(query, conn);
                         SqlDataReader reader = cmd.ExecuteReader();
 
                         // Use a StringBuilder for performance
