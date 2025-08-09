@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.IO;
 using BridgeVueApp.Database;
+using BridgeVueApp.Models;
 
 namespace BridgeVueApp
 {
@@ -57,14 +58,14 @@ namespace BridgeVueApp
                 conn.Open();
 
                 // Optionally reset previous bests
-                string resetSql = $"UPDATE {DatabaseConfig.TableModelPerformances} SET IsCurrentBest = 0 WHERE IsCurrentBest = 1";
+                string resetSql = $"UPDATE {DatabaseConfig.TableModelPerformance} SET IsCurrentBest = 0 WHERE IsCurrentBest = 1";
                 using (var resetCmd = new SqlCommand(resetSql, conn))
                 {
                     resetCmd.ExecuteNonQuery();
                 }
 
                 string insertSql = $@"
-                    INSERT INTO {DatabaseConfig.TableModelPerformances} (
+                    INSERT INTO {DatabaseConfig.TableModelPerformance} (
                         ModelName, TrainingDate, Accuracy, F1Score, AUC, Precision, Recall,
                         TrainingDataSize, TestDataSize, IsCurrentBest, ModelFilePath
                     )

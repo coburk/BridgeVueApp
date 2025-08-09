@@ -14,8 +14,9 @@ namespace BridgeVueApp.DataGeneration
             _progress = progress;
         }
 
+        // Generate synthetic data without saving to the database
+        public async Task GenerateSyntheticOnlyAsync(bool includeWeeklyEmotions = false)
 
-        public async Task GenerateSyntheticOnlyAsync()
         {
             _progress?.Report("Starting synthetic data generation...");
 
@@ -26,6 +27,24 @@ namespace BridgeVueApp.DataGeneration
             var intakeList = SyntheticDataGenerator.GenerateIntakeData(students, _progress);
             var behaviorList = SyntheticDataGenerator.GenerateDailyBehavior(students, intakeList, _progress);
             var exitList = SyntheticDataGenerator.GenerateExitData(students, _progress);
+
+            // Optionally include weekly emotions
+            if (includeWeeklyEmotions)
+            {
+                var weeklyEmotions = SyntheticDataGenerator.GenerateWeeklyEmotionData(behaviorList);
+                foreach (var entry in behaviorList)
+                {
+                    var weekly = weeklyEmotions
+                        .FirstOrDefault(w => w.StudentID == entry.StudentID && w.WeekInProgram == entry.WeekInProgram);
+                    if (weekly != null)
+                    {
+                        entry.WeeklyEmotionPictogram = weekly.WeeklyEmotionPictogram;
+                        entry.WeeklyEmotionPictogramNumeric = weekly.WeeklyEmotionPictogramNumeric;
+                        entry.WeeklyEmotionDate = weekly.WeeklyEmotionDate;
+                    }
+                }
+            }
+
 
             // Save for later database insertion
             DataGenerationUtils.GeneratedProfiles = students;
@@ -44,6 +63,7 @@ namespace BridgeVueApp.DataGeneration
                     behaviorList.Count(b => b.ZoneOfRegulation == "Red") / (float)behaviorList.Count
             };
 
+            
             _progress?.Report("✅ Synthetic data generation complete.");
         }
 

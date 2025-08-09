@@ -1,19 +1,13 @@
 ﻿// SetupForm.cs
 
-using Bogus;
 using BridgeVueApp.Database;
 using BridgeVueApp.DataGeneration;
 using BridgeVueApp.Models;
 using CsvHelper;
 using Microsoft.Data.SqlClient;
-using Microsoft.ML.Data;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using BridgeVueApp.Database;
 using BVDatabase = BridgeVueApp.Database.DatabaseLoader;
 
 
@@ -39,44 +33,41 @@ namespace BridgeVueApp
 
 
 
-        // DROP and Create Database and Tables
-        private async void btnCreateDatabaseAndTables_Click(object sender, EventArgs e)
+        private void btnCreateDatabaseAndTables_Click(object sender, EventArgs e)
         {
-            progressBar.Value = 0;
-            lblStatus.Text = "Generating data...";
+            var confirm = MessageBox.Show(
+                "⚠️ This will drop the existing database and delete all current data.\n\nDo you want to continue?",
+                "Confirm Database Reset",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
 
-            var progress = new Progress<string>(status =>
+            if (confirm != DialogResult.Yes)
             {
-                lblStatus.Text = status;
-
-                // Try to extract percentage from message (if any)
-                if (status.Contains("%"))
-                {
-                    int percent = ExtractPercentage(status);
-                    if (percent >= 0 && percent <= 100)
-                        progressBar.Value = percent;
-                }
-            });
-
-            var generator = new DataGenerationManager(progress);
+                lblStatus.Text = "Database reset cancelled.";
+                return;
+            }
 
             try
             {
-                await generator.GenerateAllAsync();
-                var summary = DataGenerationUtils.LastExitSummary;
-                lblStatus.Text = $"Synthetic Data Generated {summary.Count} exits | " +
-                                 $"Improvement: {summary.AvgImprovement:F2} | " +
-                                 $"Effectiveness: {summary.AvgEffectiveness:F2} | " +
-                                 $"Aggression: {summary.AvgAggression:F2}";
+                progressBar.Value = 0;
+                lblStatus.Text = "⏳ Dropping and recreating database...";
 
+                // Full reset logic
+                DatabaseInitializer.DropDatabaseIfExists();
+                DatabaseInitializer.CreateDatabaseIfNotExists();
+                DatabaseInitializer.CreateTablesIfNotExist();
 
+                lblStatus.Text = "✅ Database and tables recreated successfully.";
+                progressBar.Value = 100;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Generation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "Data generation failed.";
+                MessageBox.Show($"Error: {ex.Message}", "Database Reset Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "❌ Database reset failed.";
             }
         }
+
 
 
 
@@ -196,6 +187,10 @@ namespace BridgeVueApp
             }
         }
 
+
+
+
+
         // Add data insights to the database info display
         private void AddDataInsights(SqlConnection conn, StringBuilder result, List<(string name, int count)> tableData)
         {
@@ -254,70 +249,7 @@ namespace BridgeVueApp
             }
         }
 
-        // Alternative compact version for smaller displays
-        private void DisplayCompactDatabaseInfo()
-        {
-            try
-            {
-                using (SqlConnection dbConnection = new SqlConnection(DatabaseConfig.FullConnection))
-                {
-                    dbConnection.Open();
-                    string query = @"
-                SELECT t.NAME AS TableName, SUM(p.rows) AS [RowCount]
-                FROM sys.tables t
-                INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id
-                INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
-                WHERE t.is_ms_shipped = 0 AND i.type <= 1
-                GROUP BY t.NAME ORDER BY t.NAME;";
 
-                    SqlCommand cmd = new SqlCommand(query, dbConnection);
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    var counts = new List<string>();
-                    int totalRows = 0;
-
-                    while (reader.Read())
-                    {
-                        string tableName = reader["TableName"].ToString();
-                        int rowCount = Convert.ToInt32(reader["RowCount"]);
-                        totalRows += rowCount;
-
-                        string shortName = tableName switch
-                        {
-                            var n when n.Contains("Student") => "Students",
-                            var n when n.Contains("Intake") => "Intake",
-                            var n when n.Contains("Behavior") => "Behaviors",
-                            var n when n.Contains("Exit") => "Exits",
-                            _ => tableName
-                        };
-
-                        counts.Add($"{shortName}:{rowCount:N0}");
-                    }
-
-                    lblStatus.Text = $"Database: {DatabaseConfig.DbName} | {string.Join(" | ", counts)} | Total:{totalRows:N0} | {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
-                }
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"Database info error: {ex.Message}";
-            }
-        }
-
-
-
-        // Load Intake Data
-        private void btnLoadIntakeData_Click(object sender, EventArgs e)
-        {
-            // Implementation for loading IntakeData CSV
-            lblStatus.Text = "IntakeData loaded successfully.";
-        }
-
-        // Load Daily Behavior
-        private void btnLoadDailyBehavior_Click(object sender, EventArgs e)
-        {
-            // Implementation for loading DailyBehavior CSV
-            lblStatus.Text = "DailyBehavior loaded successfully.";
-        }
 
 
 
@@ -334,14 +266,15 @@ namespace BridgeVueApp
 
             try
             {
-                await generator.GenerateSyntheticOnlyAsync(); // generate but do NOT save
-                lblStatus.Text = $"Synthetic data ready. {DataGenerationUtils.LastExitSummary.Count} exit records.";
+                // Generate synthetic data with weekly emotions but Do Not Save
+                await generator.GenerateSyntheticOnlyAsync(includeWeeklyEmotions: true);  
+                lblStatus.Text = $"Synthetic data generation complete. {DataGenerationUtils.LastExitSummary.Count} exit records generated.";
                 progressBar.Value = 100;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Data generation failed: {ex.Message}");
-                lblStatus.Text = "❌ Data generation failed.";
+                MessageBox.Show($"Synthetic data generation failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "❌ Synthetic data generation failed.";
             }
         }
 
@@ -357,31 +290,37 @@ namespace BridgeVueApp
         {
             try
             {
-                BVDatabase.BulkInsertStudentProfiles(DataGenerationUtils.GeneratedProfiles);
+                // Separate loader logic - assumes StudentProfiles already inserted and IDs assigned
+                var savedProfiles = BVDatabase.BulkInsertStudentProfiles(DataGenerationUtils.GeneratedProfiles);
+                progressBar.Value = 20;
                 BVDatabase.BulkInsertIntakeData(DataGenerationUtils.GeneratedIntake);
+                progressBar.Value = 40;
                 BVDatabase.BulkInsertDailyBehavior(DataGenerationUtils.GeneratedBehavior);
+                progressBar.Value = 60;
                 BVDatabase.BulkInsertExitData(DataGenerationUtils.GeneratedExitData);
-
+                progressBar.Value = 80;
 
                 lblStatus.Text = $"✅ Saved {DataGenerationUtils.GeneratedProfiles.Count} students to DB.";
                 progressBar.Value = 100;
             }
+
+
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save to database: {ex.Message}");
                 lblStatus.Text = "❌ Save failed.";
+                progressBar.Value = 0;
             }
         }
 
 
 
 
-
         // Save Generated Data as CSVs
         private void btnSaveGeneratedCSV_Click(object sender, EventArgs e)
-{
+        {
 
-    
+
             try
             {
                 string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
@@ -393,28 +332,32 @@ namespace BridgeVueApp
                 using (var writer = new StreamWriter(Path.Combine(folderPath, "StudentProfile.csv")))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
                 {
-                    csv.WriteRecords(generatedProfiles);
+                    csv.WriteRecords(DataGenerationUtils.GeneratedProfiles);
+                    progressBar.Value = 25;
                 }
 
                 // Save Intake Data with new numeric and normalized fields
                 using (var writer = new StreamWriter(Path.Combine(folderPath, "IntakeData.csv")))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
                 {
-                    csv.WriteRecords(generatedIntake);
+                    csv.WriteRecords(DataGenerationUtils.GeneratedIntake);
+                    progressBar.Value = 50;
                 }
 
                 // Save Daily Behavior with new numeric and ML fields
                 using (var writer = new StreamWriter(Path.Combine(folderPath, "DailyBehavior.csv")))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
                 {
-                    csv.WriteRecords(generatedBehavior);
+                    csv.WriteRecords(DataGenerationUtils.GeneratedBehavior);
+                    progressBar.Value = 70;
                 }
 
                 // Save Exit Data with new numeric and ML metrics
                 using (var writer = new StreamWriter(Path.Combine(folderPath, "ExitData.csv")))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
                 {
-                    csv.WriteRecords(generatedExitData);
+                    csv.WriteRecords(DataGenerationUtils.GeneratedExitData);
+                    progressBar.Value = 80;
                 }
 
                 // Create a summary file with metadata
@@ -423,31 +366,29 @@ namespace BridgeVueApp
                     writer.WriteLine($"Synthetic Data Export Summary");
                     writer.WriteLine($"Generated on: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
                     writer.WriteLine($"Generated by: {Environment.UserName}");
+                    writer.WriteLine($"Export Folder: {folderPath}");
                     writer.WriteLine($"");
                     writer.WriteLine($"Record Counts:");
-                    writer.WriteLine($"  Student Profiles: {generatedProfiles.Count}");
-                    writer.WriteLine($"  Intake Records: {generatedIntake.Count}");
-                    writer.WriteLine($"  Daily Behavior Records: {generatedBehavior.Count}");
-                    writer.WriteLine($"  Exit Records: {generatedExitData.Count}");
+                    writer.WriteLine($"  Student Profiles: {DataGenerationUtils.GeneratedProfiles.Count}");
+                    writer.WriteLine($"  Intake Records: {DataGenerationUtils.GeneratedIntake.Count}");
+                    writer.WriteLine($"  Daily Behavior Records: {DataGenerationUtils.GeneratedBehavior.Count}");
+                    writer.WriteLine($"  Exit Records: {DataGenerationUtils.GeneratedExitData.Count}");
                     writer.WriteLine($"");
                     writer.WriteLine($"File Contents:");
-                    writer.WriteLine($"  StudentProfile.csv - Student demographics with text and numeric equivalents");
-                    writer.WriteLine($"  IntakeData.csv - Intake assessments with normalized ML features");
-                    writer.WriteLine($"  DailyBehavior.csv - Daily behavior tracking with ML metrics");
-                    writer.WriteLine($"  ExitData.csv - Program completion data with improvement metrics");
-                    writer.WriteLine($"");
-                    writer.WriteLine($"New Features in this Export:");
-                    writer.WriteLine($"  - Numeric equivalents for all categorical data");
-                    writer.WriteLine($"  - Normalized scores (0-1 scale) for ML training");
-                    writer.WriteLine($"  - Improvement metrics and success indicators");
-                    writer.WriteLine($"  - Temporal features (day/week in program)");
-                }
+                    writer.WriteLine($"  StudentProfile.csv    - Student demographics with text and numeric equivalents");
+                    writer.WriteLine($"  IntakeData.csv        - Intake assessments with normalized ML features");
+                    writer.WriteLine($"  DailyBehavior.csv     - Daily behavior tracking with ML metrics");
+                    writer.WriteLine($"  ExitData.csv          - Program completion data with improvement metrics");
+                    writer.WriteLine($"  DataSummary.txt       - Summary of the generated data");
 
+                }
+                progressBar.Value = 90;
 
 
                 // Show success message with option to open folder
                 DialogResult result = MessageBox.Show($"Data successfully exported to:\n{folderPath}\n\nWould you like to open the folder?",
                                                     "Export Complete", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                progressBar.Value = 100;
 
                 if (result == DialogResult.Yes)
                 {
@@ -461,11 +402,15 @@ namespace BridgeVueApp
                 lblStatus.Text = $"❌ Export Failed: {ex.Message}";
                 MessageBox.Show($"Failed to export CSV files:\n\n{ex.Message}", "Export Error",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                progressBar.Value = 0;
             }
- 
+
         }
 
 
+
+
+        // Analyze Exit Outcomes
         private void btnExitOutcomeCount_Click(object sender, EventArgs e)
         {
             // Analyze the Data Distribution
@@ -508,10 +453,16 @@ namespace BridgeVueApp
                 {
                     MessageBox.Show("Error: " + ex.Message);
                     lblStatus.Text = "Failed to retrieve database info.";
+                    progressBar.Value = 0;
                 }
             }
         }
 
+
+
+
+
+        // Analyze Behavior Averages by Exit Outcome
         private void btnExitOutcomeAvgs_Click(object sender, EventArgs e)
         {
             // Analyze the Data Distribution
@@ -563,11 +514,50 @@ namespace BridgeVueApp
                 {
                     MessageBox.Show("Error: " + ex.Message);
                     lblStatus.Text = "Failed to retrieve database info.";
+                    progressBar.Value = 0;
                 }
-            
+
             }
         }
 
+
+
+
+
+        // Load Student Profile Data
+        private void btnLoadStudentProfile_Click(object sender, EventArgs e)
+        {
+            // Implementation for loading StudentProfile CSV
+            lblStatus.Text = "Ready to Load Student Profile Data...But nothing is here!";
+            //lblStatus.Text = "Student Profile Data loaded successfully.";
+        }
+
+
+
+
+        // Load Intake Data
+        private void btnLoadIntakeData_Click(object sender, EventArgs e)
+        {
+            // Implementation for loading IntakeData CSV
+            lblStatus.Text = "Ready to Load Intake Data...But nothing is here!";
+            //lblStatus.Text = "Intake Data loaded successfully.";
+        }
+
+
+
+        // Load Daily Behavior
+        private void btnLoadDailyBehavior_Click(object sender, EventArgs e)
+        {
+            // Implementation for loading DailyBehavior CSV
+            lblStatus.Text = "Ready to Load Daily Behavior Data...But nothing is here!";
+            //lblStatus.Text = "DailyBehavior loaded successfully.";
+        }
+
+
+
+
+
+        // Helper method to extract percentage from status message
         private int ExtractPercentage(string status)
         {
             var match = System.Text.RegularExpressions.Regex.Match(status, @"(\d+)%");
@@ -577,27 +567,21 @@ namespace BridgeVueApp
         }
 
 
-        private void btnLoadStudentProfile_Click(object sender, EventArgs e)
+
+
+        public class ModelPerformance
         {
-
-
-          //  MessageBox.Show("Ready to Load student profile...But nothing is here!");
+            public string ModelName { get; set; }
+            public DateTime TrainingDate { get; set; }
+            public float Accuracy { get; set; }
+            public float F1Score { get; set; }
+            public float AUC { get; set; }
+            public float Precision { get; set; }
+            public float Recall { get; set; }
+            public int TrainingDataSize { get; set; }
+            public int TestDataSize { get; set; }
+            public bool IsCurrentBest { get; set; }
+            public string ModelFilePath { get; set; }
         }
-    }
-
-
-    public class ModelPerformance
-    {
-        public string ModelName { get; set; }
-        public DateTime TrainingDate { get; set; }
-        public float Accuracy { get; set; }
-        public float F1Score { get; set; }
-        public float AUC { get; set; }
-        public float Precision { get; set; }
-        public float Recall { get; set; }
-        public int TrainingDataSize { get; set; }
-        public int TestDataSize { get; set; }
-        public bool IsCurrentBest { get; set; }
-        public string ModelFilePath { get; set; }
     }
 }

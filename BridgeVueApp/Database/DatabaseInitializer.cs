@@ -7,6 +7,26 @@ namespace BridgeVueApp.Database
 {
     public static class DatabaseInitializer
     {
+
+        // Drops the database if it exists
+        public static void DropDatabaseIfExists()
+        {
+            using var conn = new SqlConnection(DatabaseConfig.BaseConnection);
+            conn.Open();
+
+
+            using var cmd = new SqlCommand(@$"
+                IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{DatabaseConfig.DbName}')
+                BEGIN
+                    ALTER DATABASE [{DatabaseConfig.DbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                    DROP DATABASE [{DatabaseConfig.DbName}];
+                END
+            ", conn);
+            cmd.ExecuteNonQuery();
+        }
+
+
+        // Creates the database if it does not exist
         public static void CreateDatabaseIfNotExists(IProgress<string> progress = null)
         {
             using var conn = new SqlConnection(DatabaseConfig.BaseConnection);
@@ -19,6 +39,8 @@ namespace BridgeVueApp.Database
             progress?.Report($"✅ Database '{DatabaseConfig.DbName}' ensured.");
         }
 
+
+        // Creates all necessary tables and views
         public static void CreateTablesIfNotExist(IProgress<string> progress = null)
         {
             try
@@ -39,10 +61,12 @@ namespace BridgeVueApp.Database
                         IF OBJECT_ID('{DatabaseConfig.TableDailyBehavior}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableDailyBehavior};
                         IF OBJECT_ID('{DatabaseConfig.TableIntakeData}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableIntakeData};
                         IF OBJECT_ID('{DatabaseConfig.TableStudentProfile}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableStudentProfile};
+                        IF OBJECT_ID('{DatabaseConfig.TableModelPerformance}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableModelPerformance};
+                        IF OBJECT_ID('{DatabaseConfig.TableModelMetricsHistory}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableModelMetricsHistory};                       
 
                         -- Create tables...
                         CREATE TABLE {DatabaseConfig.TableStudentProfile} (
-                            StudentID INT PRIMARY KEY,
+                            StudentID INT IDENTITY(1001,1) PRIMARY KEY,
                             FirstName NVARCHAR(50),
                             LastName NVARCHAR(50),
                             Grade INT NOT NULL,
@@ -141,9 +165,42 @@ namespace BridgeVueApp.Database
                             CONSTRAINT FK_Exit_Student FOREIGN KEY (StudentID) REFERENCES {DatabaseConfig.TableStudentProfile}(StudentID) ON DELETE CASCADE
                         );
 
+                        CREATE TABLE ModelPerformance (
+                            ModelID INT IDENTITY(1,1) PRIMARY KEY,
+                            TrainingDate DATETIME2,
+                            ModelName NVARCHAR(100),
+                            ModelType NVARCHAR(100),
+                            Hyperparameters NVARCHAR(500),
+                            TrainingDuration INT,  -- Duration in seconds
+                            Accuracy FLOAT,
+                            F1Score FLOAT,
+                            AUC FLOAT,
+                            [Precision] FLOAT,
+                            Recall FLOAT,
+                            TrainingDataSize INT,
+                            TestDataSize INT,
+                            IsCurrentBest BIT,
+                            ModelFilePath NVARCHAR(500)
+                        );
+
+                        CREATE TABLE ModelMetricsHistory (
+                            MetricID INT IDENTITY(1,1) PRIMARY KEY,
+                            ModelID INT,  -- Foreign key referencing ModelPerformance
+                            Accuracy FLOAT,
+                            F1Score FLOAT,
+                            AUC FLOAT,
+                            Precision FLOAT,
+                            Recall FLOAT,
+                            Timestamp DATETIME2
+                            CONSTRAINT FK_ModelPerf_MetricsHist FOREIGN KEY (ModelID) REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID) ON DELETE CASCADE
+                        );
+
+
+
                         CREATE INDEX IX_Intake_StudentID ON {DatabaseConfig.TableIntakeData}(StudentID);
                         CREATE INDEX IX_Behavior_StudentID_Timestamp ON {DatabaseConfig.TableDailyBehavior}(StudentID, Timestamp);
                         CREATE INDEX IX_Exit_StudentID ON {DatabaseConfig.TableExitData}(StudentID);
+
                     ";
 
                     new SqlCommand(sql, conn).ExecuteNonQuery();
@@ -207,7 +264,24 @@ namespace BridgeVueApp.Database
 
                 new SqlCommand(mlView, conn).ExecuteNonQuery();
                 progress?.Report("📊 View vw_MLReadyData created.");
+            
+
+            // View for prediction summary (used in ExitOutcomeAvgs)
+               string predictionView = $@"
+                    CREATE OR ALTER VIEW vStudentPredictionData AS
+                    SELECT 
+                        StudentID,
+                        AVG(CAST(VerbalAggression AS FLOAT)) AS AvgVerbalAggression,
+                        AVG(CAST(PhysicalAggression AS FLOAT)) AS AvgPhysicalAggression,
+                        AVG(CAST(AcademicEngagement AS FLOAT)) AS AvgAcademicEngagement,
+                        SUM(CASE WHEN ZoneOfRegulation = 'Red' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS RedZonePct
+                    FROM {DatabaseConfig.TableDailyBehavior}
+                    GROUP BY StudentID;";
+
+                new SqlCommand(predictionView, conn).ExecuteNonQuery();
+                progress?.Report("📊 View vStudentPredictionData created.");
             }
+
             catch (Exception ex)
             {
                 progress?.Report($"⚠️ Error creating views: {ex.Message}");

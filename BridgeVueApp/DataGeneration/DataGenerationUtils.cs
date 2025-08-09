@@ -73,12 +73,11 @@ namespace BridgeVueApp.DataGeneration
 
         public static int GetEmotionNumeric(string emotion) => emotion switch
         {
-            "Happy" => 6,
-            "Excited" => 5,
-            "Nervous" => 4,
-            "Lonely" => 3,
-            "Sad" => 2,
-            "Angry" => 1,
+            "Happy" => 5,
+            "Calm" => 4,
+            "Anxious" => 3,
+            "Angry" => 2,
+            "Sad" => 1,
             _ => 0
         };
 
@@ -131,7 +130,7 @@ namespace BridgeVueApp.DataGeneration
 
         public static string GetEmotionBasedOnBehavior(double aggressionRisk, double engagementLevel)
         {
-            var emotions = new[] { "Happy", "Sad", "Angry", "Lonely", "Nervous", "Excited" };
+            var emotions = new[] { "Happy", "Calm", "Anxious", "Angry", "Sad" };
             var weights = new double[]
             {
                 engagementLevel * 0.8,

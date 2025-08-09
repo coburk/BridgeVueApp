@@ -10,13 +10,12 @@ namespace BridgeVueApp.DataGeneration
 {
     public static class SyntheticDataGenerator
     {
+        // Generates a list of student profiles with random data
         public static List<StudentProfile> GenerateStudentProfiles(int count, IProgress<string> progress)
         {
             var students = new List<StudentProfile>();
-            var id = 1;
 
             var faker = new Faker<StudentProfile>()
-                .RuleFor(s => s.StudentID, (f, s) => id++)
                 .RuleFor(s => s.FirstName, (f, s) => f.Name.FirstName())
                 .RuleFor(s => s.LastName, (f, s) => f.Name.LastName())
                 .RuleFor(s => s.Grade, (f, s) => f.Random.Int(3, 6))
@@ -43,6 +42,9 @@ namespace BridgeVueApp.DataGeneration
             return students;
         }
 
+
+
+        // Generates intake data for each student based on their profile
         public static List<IntakeData> GenerateIntakeData(List<StudentProfile> students, IProgress<string> progress)
         {
             var intakeList = new List<IntakeData>();
@@ -54,6 +56,7 @@ namespace BridgeVueApp.DataGeneration
                 int priorIncidents = faker.Random.Int(0, 5);
                 float stress = faker.Random.Float(0.0f, 1.0f);
 
+                // Risk score calculation
                 float riskScore = (priorIncidents / 5.0f) * 0.4f + (1 - familySupport) * 0.3f + stress * 0.3f;
 
                 var intake = new IntakeData
@@ -93,6 +96,7 @@ namespace BridgeVueApp.DataGeneration
             return intakeList;
         }
 
+        // Generates daily behavior records for each student based on their intake data
         public static List<DailyBehavior> GenerateDailyBehavior(List<StudentProfile> students, List<IntakeData> intakeList, IProgress<string> progress)
         {
             var behaviorList = new List<DailyBehavior>();
@@ -154,6 +158,58 @@ namespace BridgeVueApp.DataGeneration
             return behaviorList;
         }
 
+
+        // Generates weekly emotion data based on daily behaviors
+        public static List<DailyBehavior> GenerateWeeklyEmotionData(List<DailyBehavior> behaviorList, IProgress<string> progress = null)
+        {
+            progress?.Report("📅 Generating weekly emotion check-ins...");
+
+            var rand = new Random();
+            var groupedByStudent = behaviorList.GroupBy(b => b.StudentID);
+
+            foreach (var group in groupedByStudent)
+            {
+                var orderedDays = group.OrderBy(b => b.Timestamp).ToList();
+
+                for (int i = 0; i < orderedDays.Count; i += 5)
+                {
+                    var window = orderedDays.Skip(i).Take(5).ToList();
+
+                    if (window.Count == 0)
+                        continue;
+
+                    // Compute a weighted score from the last 5 days
+                    double redZoneCount = window.Count(b => b.ZoneOfRegulation == "Red");
+                    double totalAggression = window.Sum(b => b.VerbalAggression + b.PhysicalAggression);
+                    double avgEngagement = window.Average(b => b.AcademicEngagement);
+                    double avgEmotionScore = (redZoneCount * 2 + totalAggression - avgEngagement) / 5.0;
+
+                    string emotion;
+                    if (avgEmotionScore > 2.5)
+                        emotion = rand.NextDouble() < 0.7 ? "Angry" : "Sad";
+                    else if (avgEmotionScore > 1.5)
+                        emotion = "Anxious";
+                    else if (avgEmotionScore > 0.5)
+                        emotion = rand.NextDouble() < 0.7 ? "Calm" : "Happy";
+                    else
+                        emotion = "Happy";
+
+                    var record = window.First();
+                    record.WeeklyEmotionDate = record.Timestamp.Date;
+                    record.WeeklyEmotionPictogram = emotion;
+                    record.WeeklyEmotionPictogramNumeric = DataGenerationUtils.GetEmotionNumeric(emotion);
+                }
+            }
+
+            progress?.Report("✅ Weekly emotion check-ins generated.");
+            return behaviorList;
+        }
+    
+
+
+
+
+        // Generates exit data for each student based on their profile and behavior
         public static List<ExitData> GenerateExitData(List<StudentProfile> students, IProgress<string> progress)
         {
             var exitList = new List<ExitData>();
@@ -261,6 +317,11 @@ namespace BridgeVueApp.DataGeneration
                 AvgEngagement = exit.Average(e => e.ProgramEffectivenessScore), // Replace with real engagement metric
                 AvgRedZonePercent = 0f // Placeholder
             };
+
+            Console.WriteLine($"Generated Profiles: {DataGenerationUtils.GeneratedProfiles.Count}");
+            Console.WriteLine($"Generated Intake: {DataGenerationUtils.GeneratedIntake.Count}");
+            Console.WriteLine($"Generated Behavior: {DataGenerationUtils.GeneratedBehavior.Count}");
+            Console.WriteLine($"Generated Exit: {DataGenerationUtils.GeneratedExitData.Count}");
 
             progress?.Report("✅ Synthetic data generation completed successfully.");
         }

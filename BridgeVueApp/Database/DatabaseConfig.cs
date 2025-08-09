@@ -14,14 +14,17 @@ namespace BridgeVueApp.Database
         public const string TableIntakeData = "IntakeData";
         public const string TableDailyBehavior = "DailyBehavior";
         public const string TableExitData = "ExitData";
-        public const string TableModelPerformances = "ModelPerformances";
+        public const string TableModelPerformance = "ModelPerformance";
+        public const string TableModelMetricsHistory = "ModelMetricsHistory";
+
 
         // Connection strings
         public static string BaseConnection =>
             "Server=localhost;Integrated Security=true;TrustServerCertificate=True;";
 
         public static string FullConnection =>
-            $"Server=localhost;Database={DbName};Integrated Security=true;TrustServerCertificate=True;";
+            $"Server=localhost;Database={DbName};Integrated Security=true;TrustServerCertificate=True;Encrypt=False;";
+            //$"Server=localhost;Database={DbName};Trusted_Connection=True;Encrypt=False;";
     }
 }
 

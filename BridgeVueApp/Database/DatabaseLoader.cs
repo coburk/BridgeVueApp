@@ -10,8 +10,10 @@ namespace BridgeVueApp.Database
 {
     public static class DatabaseLoader
     {
-        public static void BulkInsertStudentProfiles(List<StudentProfile> profiles)
+        public static List<StudentProfile> BulkInsertStudentProfiles(List<StudentProfile> profiles)
         {
+            var inserted = new List<StudentProfile>();
+
             using (SqlConnection conn = new SqlConnection(DatabaseConfig.FullConnection))
             {
                 conn.Open();
@@ -19,14 +21,13 @@ namespace BridgeVueApp.Database
                 foreach (var profile in profiles)
                 {
                     string query = $@"
-                        INSERT INTO {DatabaseConfig.TableStudentProfile} (StudentID, FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
-                            Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed, CreatedDate, ModifiedDate)
-                        VALUES (@StudentID, @FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric, 
-                            @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed, @CreatedDate, @ModifiedDate);";
+                INSERT INTO {DatabaseConfig.TableStudentProfile} (FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
+                    Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed, CreatedDate, ModifiedDate)
+                VALUES (@FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric, 
+                    @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed, @CreatedDate, @ModifiedDate);";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        cmd.Parameters.AddWithValue("@StudentID", profile.StudentID);
                         cmd.Parameters.AddWithValue("@FirstName", profile.FirstName);
                         cmd.Parameters.AddWithValue("@LastName", profile.LastName);
                         cmd.Parameters.AddWithValue("@Grade", profile.Grade);
@@ -43,9 +44,14 @@ namespace BridgeVueApp.Database
                         cmd.Parameters.AddWithValue("@ModifiedDate", profile.ModifiedDate);
                         cmd.ExecuteNonQuery();
                     }
+
+                    inserted.Add(profile);
                 }
             }
+
+            return inserted;
         }
+
 
         public static void BulkInsertIntakeData(List<IntakeData> intakeList)
         {
