@@ -31,6 +31,7 @@ namespace BridgeVueApp.Models
         public int WeekInProgram { get; set; }
         public DateTime? CreatedDate { get; set; }
         public string StaffComments { get; set; }
+        public Guid StudentLocalKey { get; set; }
     }
 
 }

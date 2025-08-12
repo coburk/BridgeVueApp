@@ -19,6 +19,7 @@ namespace BridgeVueApp.Models
         public bool? DidSucceed { get; set; }           
         public DateTime? CreatedDate { get; set; }      
         public DateTime? ModifiedDate { get; set; }
+        public Guid LocalKey { get; set; } = Guid.NewGuid();
     }
 
 }

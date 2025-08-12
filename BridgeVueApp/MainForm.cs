@@ -211,52 +211,75 @@ namespace BridgeVueApp
             {
                 if (selectedEmotionName == null || selectedZoneName == null)
                 {
-                    MessageBox.Show("Please select both an emotion and a zone before saving.", "Missing Data", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Please select both an emotion and a zone before saving.",
+                        "Missing Data", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-
-                // Replace with actual StudentID selection logic
-                int studentId = 1; // Placeholder until student selection is implemented
+                // Ensure a student is selected
+                if (cmbStudent.SelectedValue == null || !(cmbStudent.SelectedValue is int studentId))
+                {
+                    MessageBox.Show("Please select a student.", "Missing Data",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
                 DateTime timestamp = DateTime.Now;
 
-                // SQL connection string
                 using (SqlConnection conn = new SqlConnection(DatabaseConfig.FullConnection))
                 {
                     conn.Open();
 
-                    string query = @"
+                    // Sanity check: confirm the StudentID exists (helps catch FK mismatches)
+                    using (var checkCmd = new SqlCommand(
+                        "SELECT COUNT(1) FROM StudentProfile WHERE StudentID = @StudentID", conn))
+                    {
+                        checkCmd.Parameters.Add("@StudentID", SqlDbType.Int).Value = studentId;
+                        var exists = (int)checkCmd.ExecuteScalar() > 0;
+                        if (!exists)
+                        {
+                            MessageBox.Show($"Selected student (ID {studentId}) was not found. " +
+                                "Please refresh students and try again.",
+                                "Student Missing", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+
+                    string insertSql = @"
                 INSERT INTO DailyBehavior (
-                    StudentID, Timestamp, ZoneOfRegulation, ZoneOfRegulationNumeric,
-                    WeeklyEmotionPictogram, WeeklyEmotionPictogramNumeric, CreatedDate
+                    StudentID, [Timestamp], ZoneOfRegulation, ZoneOfRegulationNumeric,
+                    WeeklyEmotionPictogram, WeeklyEmotionPictogramNumeric, StaffComments, CreatedDate
                 )
                 VALUES (
                     @StudentID, @Timestamp, @Zone, @ZoneNum,
-                    @Emotion, @EmotionNum, @CreatedDate
-                )";
+                    @Emotion, @EmotionNum, @StaffComments, @CreatedDate
+                );";
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlCommand cmd = new SqlCommand(insertSql, conn))
                     {
-                        cmd.Parameters.AddWithValue("@StudentID", studentId);
-                        cmd.Parameters.AddWithValue("@Timestamp", timestamp);
-                        cmd.Parameters.AddWithValue("@Zone", selectedZoneName);
-                        cmd.Parameters.AddWithValue("@ZoneNum", selectedZoneValue);
-                        cmd.Parameters.AddWithValue("@Emotion", selectedEmotionName);
-                        cmd.Parameters.AddWithValue("@EmotionNum", selectedEmotionValue);
-                        cmd.Parameters.AddWithValue("@CreatedDate", timestamp);
+                        cmd.Parameters.Add("@StudentID", SqlDbType.Int).Value = studentId;   
+                        cmd.Parameters.Add("@Timestamp", SqlDbType.DateTime2).Value = timestamp;
+                        cmd.Parameters.Add("@Zone", SqlDbType.NVarChar, 32).Value = selectedZoneName;
+                        cmd.Parameters.Add("@ZoneNum", SqlDbType.Int).Value = selectedZoneValue;
+                        cmd.Parameters.Add("@Emotion", SqlDbType.NVarChar, 32).Value = selectedEmotionName;
+                        cmd.Parameters.Add("@EmotionNum", SqlDbType.Int).Value = selectedEmotionValue;
+                        cmd.Parameters.Add("@StaffComments", SqlDbType.NVarChar, 500).Value = rtbStaffComments.Text.Trim();
+                        cmd.Parameters.Add("@CreatedDate", SqlDbType.DateTime2).Value = timestamp;
 
                         cmd.ExecuteNonQuery();
                     }
-
-                    MessageBox.Show("Daily behavior entry recorded successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+
+                MessageBox.Show("Daily behavior entry recorded successfully.",
+                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error saving entry:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error saving entry:\n" + ex.Message,
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
 
 
         private void LoadStudents()

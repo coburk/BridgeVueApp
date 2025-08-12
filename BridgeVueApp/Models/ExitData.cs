@@ -21,6 +21,7 @@ namespace BridgeVueApp.Models
         public bool SuccessIndicator { get; set; }
         public DateTime? CreatedDate { get; set; }
         public DateTime? ModifiedDate { get; set; }
+        public Guid StudentLocalKey { get; set; }
     }
 
 }

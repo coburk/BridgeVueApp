@@ -30,6 +30,7 @@ namespace BridgeVueApp.Models
         public float EmotionalRegulationNormalized { get; set; }
         public DateTime? CreatedDate { get; set; }
         public DateTime? ModifiedDate { get; set; }
+        public Guid StudentLocalKey { get; set; }
     }
 
 }

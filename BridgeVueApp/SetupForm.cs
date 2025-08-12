@@ -259,16 +259,16 @@ namespace BridgeVueApp
         private async void btnGenerateSyntheticData_Click(object sender, EventArgs e)
         {
             progressBar.Value = 0;
+            int numStudents = 50; // fixed for now
             lblStatus.Text = "Generating synthetic data...";
 
             var progress = new Progress<string>(status => lblStatus.Text = status);
-            var generator = new DataGenerationManager(progress);
 
             try
             {
-                // Generate synthetic data with weekly emotions but Do Not Save
-                await generator.GenerateSyntheticOnlyAsync(includeWeeklyEmotions: true);  
-                lblStatus.Text = $"Synthetic data generation complete. {DataGenerationUtils.LastExitSummary.Count} exit records generated.";
+                await DataGenerationManager.GenerateSyntheticOnlyAsync(numStudents, progress);
+                // MessageBox.Show("Generated data loaded successfully.", "Success",
+                //     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 progressBar.Value = 100;
             }
             catch (Exception ex)

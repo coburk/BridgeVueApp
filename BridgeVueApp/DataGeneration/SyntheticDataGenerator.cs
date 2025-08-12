@@ -16,6 +16,7 @@ namespace BridgeVueApp.DataGeneration
             var students = new List<StudentProfile>();
 
             var faker = new Faker<StudentProfile>()
+                .RuleFor(s => s.LocalKey, f => Guid.NewGuid())  // Assign a unique LocalKey to each profile
                 .RuleFor(s => s.FirstName, (f, s) => f.Name.FirstName())
                 .RuleFor(s => s.LastName, (f, s) => f.Name.LastName())
                 .RuleFor(s => s.Grade, (f, s) => f.Random.Int(3, 6))
@@ -61,7 +62,7 @@ namespace BridgeVueApp.DataGeneration
 
                 var intake = new IntakeData
                 {
-                    StudentID = student.StudentID,
+                    StudentLocalKey = student.LocalKey, // Link to StudentProfile
                     EntryReason = faker.PickRandom("Aggression", "Anxiety", "Trauma", "Withdrawn", "Disruptive", "Other"),
                     PriorIncidents = priorIncidents,
                     OfficeReferrals = faker.Random.Int(0, 3),
@@ -126,7 +127,7 @@ namespace BridgeVueApp.DataGeneration
                     var record = new DailyBehavior
                     {
                         BehaviorID = behaviorId++,
-                        StudentID = student.StudentID,
+                        StudentLocalKey = student.LocalKey, // Link to StudentProfile
                         Timestamp = start.AddDays(day).AddHours(faker.Random.Int(8, 15)),
                         Level = faker.Random.Int(1, 5),
                         Step = faker.Random.Int(1, 3),
@@ -256,7 +257,7 @@ namespace BridgeVueApp.DataGeneration
 
                     var exit = new ExitData
                     {
-                        StudentID = student.StudentID,
+                        StudentLocalKey = student.LocalKey, // Link to StudentProfile
                         ExitReason = predictedOutcome,
                         ExitReasonNumeric = DataGenerationUtils.GetExitReasonNumeric(predictedOutcome),
                         ExitDate = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 5)),

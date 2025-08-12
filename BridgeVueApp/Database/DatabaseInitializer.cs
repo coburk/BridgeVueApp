@@ -36,7 +36,7 @@ namespace BridgeVueApp.Database
             using var cmd = new SqlCommand(sql, conn);
             cmd.ExecuteNonQuery();
 
-            progress?.Report($"✅ Database '{DatabaseConfig.DbName}' ensured.");
+            progress?.Report($"✅ Database '{DatabaseConfig.DbName}' created.");
         }
 
 
@@ -53,8 +53,8 @@ namespace BridgeVueApp.Database
 
                     string sql = $@"
                         -- Drop existing views
-                        IF OBJECT_ID('vw_BehavioralAggregates', 'V') IS NOT NULL DROP VIEW vw_BehavioralAggregates;
-                        IF OBJECT_ID('vw_MLReadyData', 'V') IS NOT NULL DROP VIEW vw_MLReadyData;
+                        IF OBJECT_ID('{DatabaseConfig.vStudentPredictionData}', 'V') IS NOT NULL DROP VIEW {DatabaseConfig.vStudentPredictionData};
+                        IF OBJECT_ID('{DatabaseConfig.vStudentMLData}', 'V') IS NOT NULL DROP VIEW {DatabaseConfig.vStudentMLData};
 
                         -- Drop existing tables (respecting FK constraints)
                         IF OBJECT_ID('{DatabaseConfig.TableExitData}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableExitData};
@@ -165,7 +165,7 @@ namespace BridgeVueApp.Database
                             CONSTRAINT FK_Exit_Student FOREIGN KEY (StudentID) REFERENCES {DatabaseConfig.TableStudentProfile}(StudentID) ON DELETE CASCADE
                         );
 
-                        CREATE TABLE ModelPerformance (
+                        CREATE TABLE {DatabaseConfig.TableModelPerformance} (
                             ModelID INT IDENTITY(1,1) PRIMARY KEY,
                             TrainingDate DATETIME2,
                             ModelName NVARCHAR(100),
@@ -183,7 +183,7 @@ namespace BridgeVueApp.Database
                             ModelFilePath NVARCHAR(500)
                         );
 
-                        CREATE TABLE ModelMetricsHistory (
+                        CREATE TABLE {DatabaseConfig.TableModelMetricsHistory} (
                             MetricID INT IDENTITY(1,1) PRIMARY KEY,
                             ModelID INT,  -- Foreign key referencing ModelPerformance
                             Accuracy FLOAT,
@@ -221,7 +221,7 @@ namespace BridgeVueApp.Database
             try
             {
                 string mlView = $@"
-                    CREATE VIEW vw_MLReadyData AS
+                    CREATE OR ALTER VIEW {DatabaseConfig.vStudentMLData} AS
                     SELECT 
                         sp.StudentID,
                         sp.Age,
@@ -263,12 +263,12 @@ namespace BridgeVueApp.Database
                     LEFT JOIN {DatabaseConfig.TableExitData} e ON sp.StudentID = e.StudentID";
 
                 new SqlCommand(mlView, conn).ExecuteNonQuery();
-                progress?.Report("📊 View vw_MLReadyData created.");
+                progress?.Report("📊 View vStudentMLData created.");
             
 
             // View for prediction summary (used in ExitOutcomeAvgs)
                string predictionView = $@"
-                    CREATE OR ALTER VIEW vStudentPredictionData AS
+                    CREATE OR ALTER VIEW {DatabaseConfig.vStudentPredictionData} AS
                     SELECT 
                         StudentID,
                         AVG(CAST(VerbalAggression AS FLOAT)) AS AvgVerbalAggression,
