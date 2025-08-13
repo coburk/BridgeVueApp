@@ -24,6 +24,9 @@ namespace BridgeVueApp
 
 
 
+
+
+
         private void btnPredictSatic_Click_1(object sender, EventArgs e)
         {
             var input = new ML_Class_Success.ModelInput()
@@ -80,12 +83,14 @@ namespace BridgeVueApp
 
 
 
+
+
+
         // Predict a random student from the database
         private void btnRandomStudentPredict_Click(object sender, EventArgs e)
         {
             PredictRandomStudent();
         }
-
 
 
         // Method to predict a random student from the database
@@ -102,6 +107,7 @@ namespace BridgeVueApp
                 {
                     if (reader.Read())
                     {
+                        /*
                         var input = new ML_Class_Success.ModelInput()
                         {
                             Grade = reader.GetInt32("Grade"),
@@ -141,6 +147,48 @@ namespace BridgeVueApp
                             GreenZonePct = Convert.ToSingle(reader["GreenZonePct"]),
                             BehaviorDays = reader.GetInt32("BehaviorDays")
                         };
+                        */
+
+                        var input = new ML_Class_Success.ModelInput()
+                        {
+                            Grade = reader.GetInt32OrDefault("Grade"),
+                            Age = reader.GetInt32OrDefault("Age"),
+                            GenderNumeric = reader.GetInt32OrDefault("GenderNumeric"),
+                            EthnicityNumeric = reader.GetInt32OrDefault("EthnicityNumeric"),
+                            SpecialEd = reader.GetBooleanOrDefault("SpecialEd"),
+                            IEP = reader.GetBooleanOrDefault("IEP"),
+                            EntryReasonNumeric = reader.GetInt32OrDefault("EntryReasonNumeric"),
+                            PriorIncidents = reader.GetInt32OrDefault("PriorIncidents"),
+                            OfficeReferrals = reader.GetInt32OrDefault("OfficeReferrals"),
+                            Suspensions = reader.GetInt32OrDefault("Suspensions"),
+                            Expulsions = reader.GetInt32OrDefault("Expulsions"),
+                            EntryAcademicLevelNumeric = reader.GetInt32OrDefault("EntryAcademicLevelNumeric"),
+                            CheckInOut = reader.GetBooleanOrDefault("CheckInOut"),
+                            StructuredRecess = reader.GetBooleanOrDefault("StructuredRecess"),
+                            StructuredBreaks = reader.GetBooleanOrDefault("StructuredBreaks"),
+                            SmallGroups = reader.GetInt32OrDefault("SmallGroups"),
+                            SocialWorkerVisits = reader.GetInt32OrDefault("SocialWorkerVisits"),
+                            PsychologistVisits = reader.GetInt32OrDefault("PsychologistVisits"),
+                            EntrySocialSkillsLevelNumeric = reader.GetInt32OrDefault("EntrySocialSkillsLevelNumeric"),
+                            RiskScore = reader.GetSingleOrDefault("RiskScore"),
+                            StudentStressLevelNormalized = reader.GetSingleOrDefault("StudentStressLevelNormalized"),
+                            FamilySupportNormalized = reader.GetSingleOrDefault("FamilySupportNormalized"),
+                            AcademicAbilityNormalized = reader.GetSingleOrDefault("AcademicAbilityNormalized"),
+                            EmotionalRegulationNormalized = reader.GetSingleOrDefault("EmotionalRegulationNormalized"),
+                            AvgVerbalAggression = reader.GetSingleOrDefault("AvgVerbalAggression"),
+                            AvgPhysicalAggression = reader.GetSingleOrDefault("AvgPhysicalAggression"),
+                            AvgAcademicEngagement = reader.GetSingleOrDefault("AvgAcademicEngagement"),
+                            AvgSocialInteractions = reader.GetSingleOrDefault("AvgSocialInteractions"),
+                            AvgEmotionalRegulation = reader.GetSingleOrDefault("AvgEmotionalRegulation"),
+                            AvgAggressionRisk = reader.GetSingleOrDefault("AvgAggressionRisk"),
+                            AvgEngagementLevel = reader.GetSingleOrDefault("AvgEngagementLevel"),
+                            RedZonePct = reader.GetSingleOrDefault("RedZonePct"),
+                            YellowZonePct = reader.GetSingleOrDefault("YellowZonePct"),
+                            BlueZonePct = reader.GetSingleOrDefault("BlueZonePct"),
+                            GreenZonePct = reader.GetSingleOrDefault("GreenZonePct"),
+                            BehaviorDays = reader.GetInt32OrDefault("BehaviorDays")
+                        };
+
 
                         var result = ML_Class_Success.Predict(input);
 
@@ -282,6 +330,11 @@ namespace BridgeVueApp
             }
         }
 
+
+
+
+
+
         private void tabBatch_Click(object sender, EventArgs e)
         {
 
@@ -291,6 +344,10 @@ namespace BridgeVueApp
         {
 
         }
+
+
+
+
 
         // Handle batch prediction button click
         private void btnBatchPredict_Click(object sender, EventArgs e)
@@ -311,6 +368,7 @@ namespace BridgeVueApp
                 {
                     while (reader.Read())
                     {
+                        /*
                         var input = new ML_Class_Success.ModelInput() // Update this class name to match your new model
                         {
                             Grade = reader.GetInt32("Grade"),
@@ -350,6 +408,48 @@ namespace BridgeVueApp
                             GreenZonePct = Convert.ToSingle(reader["GreenZonePct"]),
                             BehaviorDays = reader.GetInt32("BehaviorDays")
                         };
+                        */
+
+                        var input = new ML_Class_Success.ModelInput()
+                        {
+                            Grade = reader.GetInt32OrDefault("Grade"),
+                            Age = reader.GetInt32OrDefault("Age"),
+                            GenderNumeric = reader.GetInt32OrDefault("GenderNumeric"),
+                            EthnicityNumeric = reader.GetInt32OrDefault("EthnicityNumeric"),
+                            SpecialEd = reader.GetBooleanOrDefault("SpecialEd"),
+                            IEP = reader.GetBooleanOrDefault("IEP"),
+                            EntryReasonNumeric = reader.GetInt32OrDefault("EntryReasonNumeric"),
+                            PriorIncidents = reader.GetInt32OrDefault("PriorIncidents"),
+                            OfficeReferrals = reader.GetInt32OrDefault("OfficeReferrals"),
+                            Suspensions = reader.GetInt32OrDefault("Suspensions"),
+                            Expulsions = reader.GetInt32OrDefault("Expulsions"),
+                            EntryAcademicLevelNumeric = reader.GetInt32OrDefault("EntryAcademicLevelNumeric"),
+                            CheckInOut = reader.GetBooleanOrDefault("CheckInOut"),
+                            StructuredRecess = reader.GetBooleanOrDefault("StructuredRecess"),
+                            StructuredBreaks = reader.GetBooleanOrDefault("StructuredBreaks"),
+                            SmallGroups = reader.GetInt32OrDefault("SmallGroups"),
+                            SocialWorkerVisits = reader.GetInt32OrDefault("SocialWorkerVisits"),
+                            PsychologistVisits = reader.GetInt32OrDefault("PsychologistVisits"),
+                            EntrySocialSkillsLevelNumeric = reader.GetInt32OrDefault("EntrySocialSkillsLevelNumeric"),
+                            RiskScore = reader.GetSingleOrDefault("RiskScore"),
+                            StudentStressLevelNormalized = reader.GetSingleOrDefault("StudentStressLevelNormalized"),
+                            FamilySupportNormalized = reader.GetSingleOrDefault("FamilySupportNormalized"),
+                            AcademicAbilityNormalized = reader.GetSingleOrDefault("AcademicAbilityNormalized"),
+                            EmotionalRegulationNormalized = reader.GetSingleOrDefault("EmotionalRegulationNormalized"),
+                            AvgVerbalAggression = reader.GetSingleOrDefault("AvgVerbalAggression"),
+                            AvgPhysicalAggression = reader.GetSingleOrDefault("AvgPhysicalAggression"),
+                            AvgAcademicEngagement = reader.GetSingleOrDefault("AvgAcademicEngagement"),
+                            AvgSocialInteractions = reader.GetSingleOrDefault("AvgSocialInteractions"),
+                            AvgEmotionalRegulation = reader.GetSingleOrDefault("AvgEmotionalRegulation"),
+                            AvgAggressionRisk = reader.GetSingleOrDefault("AvgAggressionRisk"),
+                            AvgEngagementLevel = reader.GetSingleOrDefault("AvgEngagementLevel"),
+                            RedZonePct = reader.GetSingleOrDefault("RedZonePct"),
+                            YellowZonePct = reader.GetSingleOrDefault("YellowZonePct"),
+                            BlueZonePct = reader.GetSingleOrDefault("BlueZonePct"),
+                            GreenZonePct = reader.GetSingleOrDefault("GreenZonePct"),
+                            BehaviorDays = reader.GetInt32OrDefault("BehaviorDays")
+                        };
+
 
                         var prediction = ML_Class_Success.Predict(input); // Update this class name to match your new model
 

@@ -222,69 +222,93 @@ namespace BridgeVueApp.Database
             {
                 string mlView = $@"
                     CREATE OR ALTER VIEW {DatabaseConfig.vStudentMLData} AS
-                    SELECT 
+                    WITH Beh AS (
+                        SELECT
+                            db.StudentID,
+                            AVG(CAST(db.VerbalAggression          AS float)) AS AvgVerbalAggression,
+                            AVG(CAST(db.PhysicalAggression        AS float)) AS AvgPhysicalAggression,
+                            AVG(CAST(db.AcademicEngagement        AS float)) AS AvgAcademicEngagement,
+                            AVG(CAST(db.SocialInteractions        AS float)) AS AvgSocialInteractions,
+                            AVG(CAST(db.EmotionalRegulation       AS float)) AS AvgEmotionalRegulation,
+                            AVG(CAST(db.AggressionRiskNormalized  AS float)) AS AvgAggressionRisk,
+                            AVG(CAST(db.EngagementLevelNormalized AS float)) AS AvgEngagementLevel,
+                            SUM(CASE WHEN db.ZoneOfRegulation = 'Red'    THEN 1 ELSE 0 END) * 1.0 / NULLIF(COUNT(*),0) AS RedZonePct,
+                            SUM(CASE WHEN db.ZoneOfRegulation = 'Yellow' THEN 1 ELSE 0 END) * 1.0 / NULLIF(COUNT(*),0) AS YellowZonePct,
+                            SUM(CASE WHEN db.ZoneOfRegulation = 'Blue'   THEN 1 ELSE 0 END) * 1.0 / NULLIF(COUNT(*),0) AS BlueZonePct,
+                            SUM(CASE WHEN db.ZoneOfRegulation = 'Green'  THEN 1 ELSE 0 END) * 1.0 / NULLIF(COUNT(*),0) AS GreenZonePct,
+                            COUNT(DISTINCT CAST(db.[Timestamp] AS date)) AS BehaviorDays
+                        FROM {DatabaseConfig.TableDailyBehavior} AS db
+                        GROUP BY db.StudentID
+                    )
+                    SELECT
                         sp.StudentID,
-                        sp.Age,
                         sp.Grade,
+                        sp.Age,
                         sp.GenderNumeric,
                         sp.EthnicityNumeric,
                         sp.SpecialEd,
                         sp.IEP,
+                    
                         i.EntryReasonNumeric,
                         i.PriorIncidents,
                         i.OfficeReferrals,
                         i.Suspensions,
                         i.Expulsions,
                         i.EntryAcademicLevelNumeric,
-                        i.EntrySocialSkillsLevelNumeric,
-                        i.RiskScore,
-                        i.StudentStressLevelNormalized,
-                        i.FamilySupportNormalized,
-                        i.AcademicAbilityNormalized,
-                        i.EmotionalRegulationNormalized,
                         i.CheckInOut,
                         i.StructuredRecess,
                         i.StructuredBreaks,
                         i.SmallGroups,
                         i.SocialWorkerVisits,
                         i.PsychologistVisits,
-                        e.ExitReasonNumeric,
-                        e.LengthOfStay,
-                        e.ExitAcademicLevelNumeric,
-                        e.ExitSocialSkillsLevelNumeric,
-                        e.AcademicImprovement,
-                        e.SocialSkillsImprovement,
-                        e.OverallImprovementScore,
-                        e.ProgramEffectivenessScore,
-                        e.SuccessIndicator,
-                        CASE WHEN e.StudentID IS NOT NULL THEN 1 ELSE 0 END AS HasKnownOutcome
-                    FROM {DatabaseConfig.TableStudentProfile} sp
-                    INNER JOIN {DatabaseConfig.TableIntakeData} i ON sp.StudentID = i.StudentID
-                    LEFT JOIN {DatabaseConfig.TableExitData} e ON sp.StudentID = e.StudentID";
+                        i.EntrySocialSkillsLevelNumeric,
+                        i.RiskScore,
+                        i.StudentStressLevelNormalized,
+                        i.FamilySupportNormalized,
+                        i.AcademicAbilityNormalized,
+                        i.EmotionalRegulationNormalized,
+                    
+                        b.AvgVerbalAggression,
+                        b.AvgPhysicalAggression,
+                        b.AvgAcademicEngagement,
+                        b.AvgSocialInteractions,
+                        b.AvgEmotionalRegulation,
+                        b.AvgAggressionRisk,
+                        b.AvgEngagementLevel,
+                        b.RedZonePct,
+                        b.YellowZonePct,
+                        b.BlueZonePct,
+                        b.GreenZonePct,
+                        b.BehaviorDays
+                    
+                    FROM {DatabaseConfig.TableStudentProfile} AS sp
+                    LEFT JOIN {DatabaseConfig.TableIntakeData} AS i  ON i.StudentID = sp.StudentID
+                    LEFT JOIN Beh AS b                               ON b.StudentID = sp.StudentID;
+                    ";
 
-                new SqlCommand(mlView, conn).ExecuteNonQuery();
+                using (var createMLView = new SqlCommand(mlView, conn))
+                    createMLView.ExecuteNonQuery();
                 progress?.Report("📊 View vStudentMLData created.");
-            
 
-            // View for prediction summary (used in ExitOutcomeAvgs)
-               string predictionView = $@"
+                string predictionView = $@"
                     CREATE OR ALTER VIEW {DatabaseConfig.vStudentPredictionData} AS
                     SELECT 
                         StudentID,
-                        AVG(CAST(VerbalAggression AS FLOAT)) AS AvgVerbalAggression,
+                        AVG(CAST(VerbalAggression   AS FLOAT)) AS AvgVerbalAggression,
                         AVG(CAST(PhysicalAggression AS FLOAT)) AS AvgPhysicalAggression,
                         AVG(CAST(AcademicEngagement AS FLOAT)) AS AvgAcademicEngagement,
                         SUM(CASE WHEN ZoneOfRegulation = 'Red' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS RedZonePct
                     FROM {DatabaseConfig.TableDailyBehavior}
                     GROUP BY StudentID;";
 
-                new SqlCommand(predictionView, conn).ExecuteNonQuery();
+                using (var createPredView = new SqlCommand(predictionView, conn))
+                    createPredView.ExecuteNonQuery();
                 progress?.Report("📊 View vStudentPredictionData created.");
             }
-
             catch (Exception ex)
             {
                 progress?.Report($"⚠️ Error creating views: {ex.Message}");
+                throw;
             }
         }
     }
