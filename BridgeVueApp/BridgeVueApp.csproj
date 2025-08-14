@@ -11,6 +11,9 @@
     <Compile Remove="SetupForm - BeforeCleanup.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="MachineLearning\ML_Class_Success.mlnet">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\favicon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -39,11 +42,6 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup Label="ML_Class_Success">
-    <None Include="ML_Class_Success.mlnet">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <None Update="Resources\Calm.png">

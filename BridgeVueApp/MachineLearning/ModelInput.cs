@@ -1,6 +1,6 @@
 ﻿using Microsoft.ML.Data;
 
-namespace BridgeVueApp
+namespace BridgeVueApp.MachineLearning
 {
     public class ModelInput
     {

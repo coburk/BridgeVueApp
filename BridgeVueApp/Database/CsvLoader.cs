@@ -1,9 +1,8 @@
-﻿using BridgeVueApp.Database;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using System.Data;
 using System.IO;
 
-namespace BridgeVueApp
+namespace BridgeVueApp.Database
 {
     public static class CsvLoader
     {

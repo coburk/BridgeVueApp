@@ -6,9 +6,8 @@ using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.IO;
 using BridgeVueApp.Database;
-using BridgeVueApp.Models;
 
-namespace BridgeVueApp
+namespace BridgeVueApp.MachineLearning
 {
     public class ModelTrainer
     {

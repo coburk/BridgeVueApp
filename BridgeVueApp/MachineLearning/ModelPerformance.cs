@@ -1,4 +1,4 @@
-﻿namespace BridgeVueApp.Models
+﻿namespace BridgeVueApp.MachineLearning
 {
     public class ModelPerformance
     {

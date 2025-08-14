@@ -12,7 +12,7 @@ using Microsoft.ML.Transforms;
 using System.Data.SqlClient;
 using Microsoft.ML.Data;
 
-namespace BridgeVueApp
+namespace BridgeVueApp.MachineLearning
 {
     public partial class ML_Class_Success
     {
