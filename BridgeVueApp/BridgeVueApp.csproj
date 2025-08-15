@@ -51,4 +51,7 @@
       <CustomToolNamespace>Happy</CustomToolNamespace>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="MachineLearning\MLArtifacts\" />
+  </ItemGroup>
 </Project>

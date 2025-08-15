@@ -16,8 +16,13 @@ namespace BridgeVueApp.Database
         public const string TableExitData = "ExitData";
         public const string TableModelPerformance = "ModelPerformance";
         public const string TableModelMetricsHistory = "ModelMetricsHistory";
+        public const string TableDatasetSnapshot = "DatasetSnapshot";
+        public const string TableModelDataUsage = "ModelDataUsage";
+        public const string TableInferenceLog = "InferenceLog";
         public const string vStudentPredictionData = "vStudentPredictionData";
-        public const string vStudentMLData = "vStudentMLData";
+        public const string vStudentMLDataRaw = "vStudentMLDataRaw";
+        public const string vStudentMLTrainingData = "vStudentMLTrainingData";
+        public const string vStudentMLScoringData = "vStudentMLScoringData";
 
 
 

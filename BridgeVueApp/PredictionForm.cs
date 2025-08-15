@@ -1,4 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using BridgeVueApp.Data;
+using BridgeVueApp.Database;
+using BridgeVueApp.MachineLearning;
+using Microsoft.Data.SqlClient;
 using Microsoft.ML;
 using System;
 using System.Collections.Generic;
@@ -10,8 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using BridgeVueApp.Data;
-using BridgeVueApp.MachineLearning;
+using static BridgeVueApp.MainForm;
 
 
 
@@ -19,14 +21,23 @@ namespace BridgeVueApp
 {
     public partial class PredictionForm : Form
     {
+
         public PredictionForm()
         {
             InitializeComponent();
             SetupBatchSummary();
+
+
+            pbTrain.Style = ProgressBarStyle.Continuous;
+            pbTrain.MarqueeAnimationSpeed = 0; 
+            pbTrain.Minimum = 0;
+            pbTrain.Maximum = 100;
+            pbTrain.Value = 0;
+            pbTrain.Visible = false;
+
+            lblTrainStatus.Visible = false;
+            lblTrainStatus.Text = "";
         }
-
-
-
 
 
 
@@ -93,6 +104,7 @@ namespace BridgeVueApp
         private void btnRandomStudentPredict_Click(object sender, EventArgs e)
         {
             PredictRandomStudent();
+
         }
 
 
@@ -100,7 +112,7 @@ namespace BridgeVueApp
         private void PredictRandomStudent()
         {
             string connString = "Server=localhost;Database=BridgeVue;Integrated Security=True;TrustServerCertificate=True;";
-            string sql = "SELECT TOP 1 * FROM vStudentMLData ORDER BY NEWID()";
+            string sql = "SELECT TOP 1 * FROM vStudentMLTrainingData ORDER BY NEWID()";
 
             using (SqlConnection conn = new SqlConnection(connString))
             {
@@ -110,77 +122,36 @@ namespace BridgeVueApp
                 {
                     if (reader.Read())
                     {
+                        // Pull StudentID from DB row
+                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentID"));
 
-                        var input = ModelInputFactory.FromReader(reader); // builds a local cache
+                        // Build input and predict
+                        var input = ModelInputFactory.FromReader(reader);
                         var result = ML_Class_Success.Predict(input);
 
-                        /*
-                        var input = new ML_Class_Success.ModelInput()
+                        // Top-1 class from score vector
+                        var (topIdx, confidence) = Top1(result.Score);
+
+                        // Map class index -> human label (guard if out of range)
+                        string predictedExitReason = topIdx >= 0
+                            ? MLLookups.Lookup(MLLookups.ExitReason, topIdx)
+                            : "Unknown";
+
+                        // Log the prediction to InferenceLog
+                        int modelId = GetCurrentBestModelId();
+                        PredictionLogger.LogPrediction(
+                            modelId,
+                            studentId.ToString(),
+                            predictedExitReason,
+                            confidence
+                        );
+
                         
-                        {
-                            Grade = reader.GetInt32OrDefault("Grade"),
-                            Age = reader.GetInt32OrDefault("Age"),
-                            GenderNumeric = reader.GetInt32OrDefault("GenderNumeric"),
-                            EthnicityNumeric = reader.GetInt32OrDefault("EthnicityNumeric"),
-                            SpecialEd = reader.GetBooleanOrDefault("SpecialEd"),
-                            IEP = reader.GetBooleanOrDefault("IEP"),
-                            EntryReasonNumeric = reader.GetInt32OrDefault("EntryReasonNumeric"),
-                            PriorIncidents = reader.GetInt32OrDefault("PriorIncidents"),
-                            OfficeReferrals = reader.GetInt32OrDefault("OfficeReferrals"),
-                            Suspensions = reader.GetInt32OrDefault("Suspensions"),
-                            Expulsions = reader.GetInt32OrDefault("Expulsions"),
-                            EntryAcademicLevelNumeric = reader.GetInt32OrDefault("EntryAcademicLevelNumeric"),
-                            CheckInOut = reader.GetBooleanOrDefault("CheckInOut"),
-                            StructuredRecess = reader.GetBooleanOrDefault("StructuredRecess"),
-                            StructuredBreaks = reader.GetBooleanOrDefault("StructuredBreaks"),
-                            SmallGroups = reader.GetInt32OrDefault("SmallGroups"),
-                            SocialWorkerVisits = reader.GetInt32OrDefault("SocialWorkerVisits"),
-                            PsychologistVisits = reader.GetInt32OrDefault("PsychologistVisits"),
-                            EntrySocialSkillsLevelNumeric = reader.GetInt32OrDefault("EntrySocialSkillsLevelNumeric"),
-                            RiskScore = reader.GetSingleOrDefault("RiskScore"),
-                            StudentStressLevelNormalized = reader.GetSingleOrDefault("StudentStressLevelNormalized"),
-                            FamilySupportNormalized = reader.GetSingleOrDefault("FamilySupportNormalized"),
-                            AcademicAbilityNormalized = reader.GetSingleOrDefault("AcademicAbilityNormalized"),
-                            EmotionalRegulationNormalized = reader.GetSingleOrDefault("EmotionalRegulationNormalized"),
-                            AvgVerbalAggression = reader.GetSingleOrDefault("AvgVerbalAggression"),
-                            AvgPhysicalAggression = reader.GetSingleOrDefault("AvgPhysicalAggression"),
-                            AvgAcademicEngagement = reader.GetSingleOrDefault("AvgAcademicEngagement"),
-                            AvgSocialInteractions = reader.GetSingleOrDefault("AvgSocialInteractions"),
-                            AvgEmotionalRegulation = reader.GetSingleOrDefault("AvgEmotionalRegulation"),
-                            AvgAggressionRisk = reader.GetSingleOrDefault("AvgAggressionRisk"),
-                            AvgEngagementLevel = reader.GetSingleOrDefault("AvgEngagementLevel"),
-                            RedZonePct = reader.GetSingleOrDefault("RedZonePct"),
-                            YellowZonePct = reader.GetSingleOrDefault("YellowZonePct"),
-                            BlueZonePct = reader.GetSingleOrDefault("BlueZonePct"),
-                            GreenZonePct = reader.GetSingleOrDefault("GreenZonePct"),
-                            BehaviorDays = reader.GetInt32OrDefault("BehaviorDays")
-                        };
 
-
-                        var result = ML_Class_Success.Predict(input);
-                        */
-
-
-
-                        // Convert predicted numeric exit reason to text using lookup
-                        string predictedExitReason = MLLookups.Lookup(MLLookups.ExitReason, (int)result.PredictedLabel);
-                        // string predictedExitReason = MLLookups.Lookup(MLLookups.ExitReason, Convert.ToInt32(result.PredictedLabel));
-
-                        // Hardcoded accuracy just for display purposes
-                        // float modelAccuracy = 0.94f;
-
-                        // With this (get the actual confidence for the predicted outcome):
-                        float modelConfidence = result.Score.Max();
-
-                        // Then update the display:
-                        rtbRandomPredictionOutput.AppendText($"{predictedExitReason}   [Confidence: {modelConfidence:P1}]\n\n");
-
-
-                        // Build output string for the RichTextBox - RESTORE ALL THE ORIGINAL FORMATTING
+                        // UI output (kept your formatting)
                         rtbRandomPredictionOutput.Clear();
                         rtbRandomPredictionOutput.Font = new Font("Consolas", 10);
 
-                        // Centered Header
                         rtbRandomPredictionOutput.SelectionAlignment = HorizontalAlignment.Center;
                         rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
                         rtbRandomPredictionOutput.SelectionColor = Color.Blue;
@@ -189,7 +160,8 @@ namespace BridgeVueApp
 
                         rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 12, FontStyle.Bold);
                         rtbRandomPredictionOutput.SelectionColor = predictedExitReason == "Graduated" ? Color.Green : Color.Orange;
-                        rtbRandomPredictionOutput.AppendText($"{predictedExitReason}\n[Confidence: {modelConfidence:P1}]\n\n");
+                        rtbRandomPredictionOutput.AppendText($"{predictedExitReason}\n[Confidence: {confidence:P1}]\n\n");
+
 
                         //float modelAccuracy = 0.94f;
 
@@ -326,7 +298,7 @@ namespace BridgeVueApp
             Debug.WriteLine($"Button clicked at {DateTime.Now:HH:mm:ss.fff}");
 
             string connString = "Server=localhost;Database=BridgeVue;Integrated Security=True;TrustServerCertificate=True;";
-            string sql = "SELECT * FROM vStudentMLData ORDER BY StudentID ASC";
+            string sql = "SELECT * FROM vStudentMLTrainingData ORDER BY StudentID ASC";
 
             List<BatchPredictionResult> results = new List<BatchPredictionResult>();
 
@@ -341,73 +313,41 @@ namespace BridgeVueApp
                     var ords = new OrdinalCache(reader);  // build once
                     while (reader.Read())
                     {
+                        // 1) Pull StudentID from DB row
+                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentID"));
 
-                        var input = ModelInputFactory.FromReader(reader, ords); // fast mapping
+                        // 2) Predict
+                        var input = ModelInputFactory.FromReader(reader, ords);
                         var prediction = ML_Class_Success.Predict(input);
 
-                        /*
-                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        // 3) Label + score (SAFE)
+                        var (topIdx, confidence) = Top1(prediction.Score ?? Array.Empty<float>());
+                        string predictedExitReason = topIdx >= 0
+                            ? MLLookups.Lookup(MLLookups.ExitReason, topIdx)
+                            : "Unknown";
+
+                        // 4) Log (don’t let logging break UI)
+                        try
                         {
-                            while (reader.Read())
-                            {
-                                              
+                            int modelId = GetCurrentBestModelId();
+                            PredictionLogger.LogPrediction(
+                                modelId,
+                                studentId.ToString(),
+                                predictedExitReason,
+                                confidence
+                            );
+                        }
+                        catch (Exception logEx)
+                        {
+                            Debug.WriteLine($"Inference logging failed: {logEx.Message}");
+                        }
 
-                            
-                                var input = new ML_Class_Success.ModelInput()
-                                {
-                                    Grade = reader.GetInt32OrDefault("Grade"),
-                                    Age = reader.GetInt32OrDefault("Age"),
-                                    GenderNumeric = reader.GetInt32OrDefault("GenderNumeric"),
-                                    EthnicityNumeric = reader.GetInt32OrDefault("EthnicityNumeric"),
-                                    SpecialEd = reader.GetBooleanOrDefault("SpecialEd"),
-                                    IEP = reader.GetBooleanOrDefault("IEP"),
-                                    EntryReasonNumeric = reader.GetInt32OrDefault("EntryReasonNumeric"),
-                                    PriorIncidents = reader.GetInt32OrDefault("PriorIncidents"),
-                                    OfficeReferrals = reader.GetInt32OrDefault("OfficeReferrals"),
-                                    Suspensions = reader.GetInt32OrDefault("Suspensions"),
-                                    Expulsions = reader.GetInt32OrDefault("Expulsions"),
-                                    EntryAcademicLevelNumeric = reader.GetInt32OrDefault("EntryAcademicLevelNumeric"),
-                                    CheckInOut = reader.GetBooleanOrDefault("CheckInOut"),
-                                    StructuredRecess = reader.GetBooleanOrDefault("StructuredRecess"),
-                                    StructuredBreaks = reader.GetBooleanOrDefault("StructuredBreaks"),
-                                    SmallGroups = reader.GetInt32OrDefault("SmallGroups"),
-                                    SocialWorkerVisits = reader.GetInt32OrDefault("SocialWorkerVisits"),
-                                    PsychologistVisits = reader.GetInt32OrDefault("PsychologistVisits"),
-                                    EntrySocialSkillsLevelNumeric = reader.GetInt32OrDefault("EntrySocialSkillsLevelNumeric"),
-                                    RiskScore = reader.GetSingleOrDefault("RiskScore"),
-                                    StudentStressLevelNormalized = reader.GetSingleOrDefault("StudentStressLevelNormalized"),
-                                    FamilySupportNormalized = reader.GetSingleOrDefault("FamilySupportNormalized"),
-                                    AcademicAbilityNormalized = reader.GetSingleOrDefault("AcademicAbilityNormalized"),
-                                    EmotionalRegulationNormalized = reader.GetSingleOrDefault("EmotionalRegulationNormalized"),
-                                    AvgVerbalAggression = reader.GetSingleOrDefault("AvgVerbalAggression"),
-                                    AvgPhysicalAggression = reader.GetSingleOrDefault("AvgPhysicalAggression"),
-                                    AvgAcademicEngagement = reader.GetSingleOrDefault("AvgAcademicEngagement"),
-                                    AvgSocialInteractions = reader.GetSingleOrDefault("AvgSocialInteractions"),
-                                    AvgEmotionalRegulation = reader.GetSingleOrDefault("AvgEmotionalRegulation"),
-                                    AvgAggressionRisk = reader.GetSingleOrDefault("AvgAggressionRisk"),
-                                    AvgEngagementLevel = reader.GetSingleOrDefault("AvgEngagementLevel"),
-                                    RedZonePct = reader.GetSingleOrDefault("RedZonePct"),
-                                    YellowZonePct = reader.GetSingleOrDefault("YellowZonePct"),
-                                    BlueZonePct = reader.GetSingleOrDefault("BlueZonePct"),
-                                    GreenZonePct = reader.GetSingleOrDefault("GreenZonePct"),
-                                    BehaviorDays = reader.GetInt32OrDefault("BehaviorDays")
-                                };
-
-
-                                var prediction = ML_Class_Success.Predict(input); // Update this class name to match your new model
-                                */
-
-
-
-
-                        // Convert predicted numeric exit reason to text using lookup
-                        string predictedExitReason = MLLookups.Lookup(MLLookups.ExitReason, (int)prediction.PredictedLabel);
-
+                        // 5) Add to results grid
                         results.Add(new BatchPredictionResult
                         {
-                            StudentID = reader.GetInt32("StudentID"),
+                            StudentID = studentId,
                             PredictedOutcome = predictedExitReason,
-                            Confidence = prediction.Score.Max().ToString("P1"),
+                            Confidence = confidence.ToString("P1"),
                             Gender = MLLookups.Lookup(MLLookups.Gender, Convert.ToInt32(input.GenderNumeric)),
                             Ethnicity = MLLookups.Lookup(MLLookups.Ethnicity, Convert.ToInt32(input.EthnicityNumeric)),
                             Grade = Convert.ToInt32(input.Grade),
@@ -418,11 +358,15 @@ namespace BridgeVueApp
                             RedZonePct = input.RedZonePct,
                             GreenZonePct = input.GreenZonePct
                         });
+
                     }
                 }
             }
 
             dgvBatchPrediction.DataSource = results;
+            dgvBatchPrediction.Invalidate();
+            dgvBatchPrediction.Refresh();
+
         }
 
         // Handle row pre-paint to color rows based on predicted exit reason
@@ -479,6 +423,18 @@ namespace BridgeVueApp
         }
 
 
+        private static (int idx, float val) Top1(float[] scores)
+        {
+            if (scores == null || scores.Length == 0) return (-1, 0f);
+            int idx = 0;
+            float max = scores[0];
+            for (int i = 1; i < scores.Length; i++)
+                if (scores[i] > max) { max = scores[i]; idx = i; }
+            return (idx, max);
+        }
+
+
+
         public class BatchPredictionResult
         {
             public int StudentID { get; set; }
@@ -495,18 +451,143 @@ namespace BridgeVueApp
             public float GreenZonePct { get; set; } // Added
         }
 
-        private void btnTrain_Click(object sender, EventArgs e)
+        private async void btnTrain_Click(object sender, EventArgs e)
         {
+            // Disable the button to prevent multiple clicks
+            btnTrain.Enabled = false;
 
-            // TODO: Replace this with actual database loading
-            var mlContext = new MLContext();
-            var trainingData = ModelTrainer.LoadTrainingDataFromDatabase();
-            var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
-            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
-            ModelTrainer.TrainAndLogModel(split.TrainSet, split.TestSet);
+            // Show progress bar and status label
+            pbTrain.Style = ProgressBarStyle.Continuous;
+            pbTrain.MarqueeAnimationSpeed = 0;
+            pbTrain.Minimum = 0;
+            pbTrain.Maximum = 100;
+            pbTrain.Value = 0;
+            pbTrain.Visible = true;
+
+            // Clear previous summary
+            rtbTrainSummary.Clear();
+            rtbTrainSummary.BringToFront();
+
+            // Show training status label
+            lblTrainStatus.Visible = true;
+            lblTrainStatus.Text = "0%";
+
+            rtbTrainSummary.Clear();
+            AppendSectionHeader("Training Log");
+
+            try
+            {
+                var ml = new MLContext(seed: 0);
+
+                // Load from DB 
+                var trainingData = ModelTrainer.LoadTrainingDataFromDatabase();
+                var dataView = ml.Data.LoadFromEnumerable(trainingData);
+
+                // Deterministic split for lineage reproducibility
+                var split = ml.Data.TrainTestSplit(dataView, testFraction: 0.2, seed: 0);
+
+                var prog = new Progress<TrainingStatus>(s =>
+                {
+                    // Estimate % by time (AutoML doesn’t expose true %)
+                    double pct = (s.TotalSeconds > 0) ? Math.Min(100.0, (s.ElapsedSeconds / s.TotalSeconds) * 100.0) : 0.0;
+                    int p = (int)Math.Round(pct);
+                    p = Math.Max(pbTrain.Minimum, Math.Min(pbTrain.Maximum, p));
+                    pbTrain.Value = p;
+                    lblTrainStatus.Text = $"{p}%";
+
+                    // Compact, readable log line into the RTB
+                    var bestPart = (s.BestValAccuracy.HasValue && !string.IsNullOrEmpty(s.BestTrainer))
+                        ? $"  (best: {s.BestTrainer} {s.BestValAccuracy.Value:P2})"
+                        : string.Empty;
+
+                    // Compact message with trainer
+                    var trainerPart = !string.IsNullOrEmpty(s.CurrentTrainer) ? $"  • {s.CurrentTrainer}" : "";
+                    
+
+                    lblTrainStatus.Text = $"{pct:0}% — {s.Message}{trainerPart}{bestPart}";
+
+                    if (s.Done)
+                    {
+                        pbTrain.Value = 100;
+                        lblTrainStatus.Text = s.Message;
+                    }
+                });
+
+                var result = await Task.Run(() => ModelTrainer.TrainAndLogModel(split.TrainSet, split.TestSet, prog, maxExperimentSeconds: 60));
+
+                // Final summary in the same RTB (clear visual break)
+                AppendSectionHeader("Training Summary");
+                AppendLog(result.Report);
+
+            }
+            catch (Exception ex)
+            {
+                AppendSectionHeader("Training Failed");
+                AppendLog(ex.Message);
+                lblTrainStatus.Text = "Error";
+            }
+            finally
+            {
+                btnTrain.Enabled = true;
+                // keep pb + label visible so the user can read the final message
+                // (hide them later if you want)
+            }
+        }
 
 
-            MessageBox.Show("Model training completed and logged.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+        private const int MaxLogChars = 80_000; // cap to avoid huge control
+
+        private void AppendLog(string line)
+        {
+            if (rtbTrainSummary.InvokeRequired)
+            {
+                rtbTrainSummary.BeginInvoke(new Action<string>(AppendLog), line);
+                return;
+            }
+
+            // Trim old text to keep control snappy
+            if (rtbTrainSummary.TextLength > MaxLogChars)
+                rtbTrainSummary.Select(0, rtbTrainSummary.TextLength - MaxLogChars / 2); // drop first half
+            else
+                rtbTrainSummary.Select(rtbTrainSummary.TextLength, 0);
+
+            // Optional: subtle color for running updates
+            rtbTrainSummary.SelectionColor = Color.DimGray;
+            rtbTrainSummary.AppendText((rtbTrainSummary.TextLength > 0 ? Environment.NewLine : string.Empty) + line);
+
+            // Autoscroll
+            rtbTrainSummary.SelectionStart = rtbTrainSummary.TextLength;
+            rtbTrainSummary.ScrollToCaret();
+        }
+
+        private void AppendSectionHeader(string title)
+        {
+            if (rtbTrainSummary.InvokeRequired)
+            {
+                rtbTrainSummary.BeginInvoke(new Action<string>(AppendSectionHeader), title);
+                return;
+            }
+            rtbTrainSummary.AppendText(Environment.NewLine + Environment.NewLine);
+            rtbTrainSummary.SelectionFont = new Font("Consolas", 10f, FontStyle.Bold);
+            rtbTrainSummary.SelectionColor = Color.Black;
+            rtbTrainSummary.AppendText(title + Environment.NewLine);
+            rtbTrainSummary.SelectionFont = new Font("Consolas", 9f, FontStyle.Regular);
+        }
+
+
+
+        // Determines the current best model ID from the database
+        private static int GetCurrentBestModelId()
+        {
+            using var conn = new SqlConnection(DatabaseConfig.FullConnection);
+            conn.Open();
+            using var cmd = new SqlCommand(
+                $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} WHERE IsCurrentBest = 1 ORDER BY ModelID DESC;",
+                conn);
+            var obj = cmd.ExecuteScalar();
+            if (obj == null) throw new InvalidOperationException("No current best model found. Train a model first.");
+            return (int)obj;
         }
 
     }

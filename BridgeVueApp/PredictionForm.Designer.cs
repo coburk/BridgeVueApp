@@ -72,6 +72,9 @@
             lblBatchSummary = new Label();
             btnBatchPredict = new Button();
             tabTrain = new TabPage();
+            rtbTrainSummary = new RichTextBox();
+            lblTrainStatus = new Label();
+            pbTrain = new ProgressBar();
             btnTrain = new Button();
             tabControl1.SuspendLayout();
             tabRandom.SuspendLayout();
@@ -560,6 +563,9 @@
             // 
             // tabTrain
             // 
+            tabTrain.Controls.Add(rtbTrainSummary);
+            tabTrain.Controls.Add(lblTrainStatus);
+            tabTrain.Controls.Add(pbTrain);
             tabTrain.Controls.Add(btnTrain);
             tabTrain.Location = new Point(4, 24);
             tabTrain.Name = "tabTrain";
@@ -568,6 +574,36 @@
             tabTrain.TabIndex = 3;
             tabTrain.Text = "Train Model";
             tabTrain.UseVisualStyleBackColor = true;
+            // 
+            // rtbTrainSummary
+            // 
+            rtbTrainSummary.Font = new Font("Consolas", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            rtbTrainSummary.Location = new Point(42, 67);
+            rtbTrainSummary.Name = "rtbTrainSummary";
+            rtbTrainSummary.ReadOnly = true;
+            rtbTrainSummary.Size = new Size(614, 373);
+            rtbTrainSummary.TabIndex = 3;
+            rtbTrainSummary.Text = "";
+            // 
+            // lblTrainStatus
+            // 
+            lblTrainStatus.AutoSize = true;
+            lblTrainStatus.Location = new Point(176, 49);
+            lblTrainStatus.Name = "lblTrainStatus";
+            lblTrainStatus.Size = new Size(84, 15);
+            lblTrainStatus.TabIndex = 2;
+            lblTrainStatus.Text = "Training Status";
+            lblTrainStatus.Visible = false;
+            // 
+            // pbTrain
+            // 
+            pbTrain.Location = new Point(176, 19);
+            pbTrain.MarqueeAnimationSpeed = 30;
+            pbTrain.Name = "pbTrain";
+            pbTrain.Size = new Size(480, 23);
+            pbTrain.Style = ProgressBarStyle.Continuous;
+            pbTrain.TabIndex = 1;
+            pbTrain.Visible = false;
             // 
             // btnTrain
             // 
@@ -613,6 +649,7 @@
             gbxBatchSummary.ResumeLayout(false);
             gbxBatchSummary.PerformLayout();
             tabTrain.ResumeLayout(false);
+            tabTrain.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -661,5 +698,8 @@
         private Label lblRedZone;
         private TabPage tabTrain;
         private Button btnTrain;
+        private Label lblTrainStatus;
+        private ProgressBar pbTrain;
+        private RichTextBox rtbTrainSummary;
     }
 }

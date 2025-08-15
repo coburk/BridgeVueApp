@@ -44,6 +44,7 @@ namespace BridgeVueApp
             btnSaveGeneratedCSV = new Button();
             btnLoadGeneratedData = new Button();
             progressBar = new ProgressBar();
+            btnBackFillTraining = new Button();
             gbxDatbase.SuspendLayout();
             gbxLoadData.SuspendLayout();
             gbxGenerate.SuspendLayout();
@@ -74,7 +75,7 @@ namespace BridgeVueApp
             // 
             // btnLoadStudentProfile
             // 
-            btnLoadStudentProfile.Location = new Point(15, 22);
+            btnLoadStudentProfile.Location = new Point(15, 31);
             btnLoadStudentProfile.Name = "btnLoadStudentProfile";
             btnLoadStudentProfile.Size = new Size(192, 23);
             btnLoadStudentProfile.TabIndex = 2;
@@ -103,7 +104,7 @@ namespace BridgeVueApp
             // 
             // btnLoadDailyBehavior
             // 
-            btnLoadDailyBehavior.Location = new Point(15, 80);
+            btnLoadDailyBehavior.Location = new Point(15, 90);
             btnLoadDailyBehavior.Name = "btnLoadDailyBehavior";
             btnLoadDailyBehavior.Size = new Size(192, 23);
             btnLoadDailyBehavior.TabIndex = 6;
@@ -113,7 +114,7 @@ namespace BridgeVueApp
             // 
             // btnLoadIntakeData
             // 
-            btnLoadIntakeData.Location = new Point(15, 51);
+            btnLoadIntakeData.Location = new Point(15, 60);
             btnLoadIntakeData.Name = "btnLoadIntakeData";
             btnLoadIntakeData.Size = new Size(192, 23);
             btnLoadIntakeData.TabIndex = 7;
@@ -168,12 +169,13 @@ namespace BridgeVueApp
             // gbxLoadData
             // 
             gbxLoadData.BackColor = SystemColors.Desktop;
+            gbxLoadData.Controls.Add(btnBackFillTraining);
             gbxLoadData.Controls.Add(btnLoadStudentProfile);
             gbxLoadData.Controls.Add(btnLoadIntakeData);
             gbxLoadData.Controls.Add(btnLoadDailyBehavior);
             gbxLoadData.Location = new Point(527, 56);
             gbxLoadData.Name = "gbxLoadData";
-            gbxLoadData.Size = new Size(228, 118);
+            gbxLoadData.Size = new Size(228, 164);
             gbxLoadData.TabIndex = 10;
             gbxLoadData.TabStop = false;
             gbxLoadData.Text = "Load Data";
@@ -217,6 +219,16 @@ namespace BridgeVueApp
             progressBar.Name = "progressBar";
             progressBar.Size = new Size(228, 23);
             progressBar.TabIndex = 12;
+            // 
+            // btnBackFillTraining
+            // 
+            btnBackFillTraining.Location = new Point(15, 123);
+            btnBackFillTraining.Name = "btnBackFillTraining";
+            btnBackFillTraining.Size = new Size(192, 23);
+            btnBackFillTraining.TabIndex = 8;
+            btnBackFillTraining.Text = "Backfill Training Data";
+            btnBackFillTraining.UseVisualStyleBackColor = true;
+            btnBackFillTraining.Click += btnBackFillTraining_Click;
             // 
             // SetupForm
             // 
@@ -263,5 +275,6 @@ namespace BridgeVueApp
         private Button btnExitOutcomeCount;
         private Button btnExitOutcomeAvgs;
         private ProgressBar progressBar;
+        private Button btnBackFillTraining;
     }
 }

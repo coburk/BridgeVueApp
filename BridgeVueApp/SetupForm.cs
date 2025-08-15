@@ -8,6 +8,7 @@ using Microsoft.Data.SqlClient;
 using System.Globalization;
 using System.Text;
 using System.Windows.Forms;
+using static BridgeVueApp.MachineLearning.ModelTrainer;
 using BVDatabase = BridgeVueApp.Database.DatabaseLoader;
 
 
@@ -582,6 +583,13 @@ namespace BridgeVueApp
             public int TestDataSize { get; set; }
             public bool IsCurrentBest { get; set; }
             public string ModelFilePath { get; set; }
+        }
+
+        private void btnBackFillTraining_Click(object sender, EventArgs e)
+        {
+            ModelTracking.BackfillTrainingRunFromCurrentData();
+            lblStatus.Text = "Training Data has been backfilled into the database.";
+            progressBar.Value = 100;
         }
     }
 }

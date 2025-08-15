@@ -36,7 +36,7 @@ namespace BridgeVueApp.Database
             using var cmd = new SqlCommand(sql, conn);
             cmd.ExecuteNonQuery();
 
-            progress?.Report($"✅ Database '{DatabaseConfig.DbName}' created.");
+            progress?.Report($"Database '{DatabaseConfig.DbName}' created.");
         }
 
 
@@ -45,7 +45,7 @@ namespace BridgeVueApp.Database
         {
             try
             {
-                progress?.Report("🔄 Creating tables...");
+                progress?.Report("Creating tables...");
 
                 using (SqlConnection conn = new SqlConnection(DatabaseConfig.FullConnection))
                 {
@@ -54,7 +54,7 @@ namespace BridgeVueApp.Database
                     string sql = $@"
                         -- Drop existing views
                         IF OBJECT_ID('{DatabaseConfig.vStudentPredictionData}', 'V') IS NOT NULL DROP VIEW {DatabaseConfig.vStudentPredictionData};
-                        IF OBJECT_ID('{DatabaseConfig.vStudentMLData}', 'V') IS NOT NULL DROP VIEW {DatabaseConfig.vStudentMLData};
+                        IF OBJECT_ID('{DatabaseConfig.vStudentMLDataRaw}', 'V') IS NOT NULL DROP VIEW {DatabaseConfig.vStudentMLDataRaw};
 
                         -- Drop existing tables (respecting FK constraints)
                         IF OBJECT_ID('{DatabaseConfig.TableExitData}', 'U') IS NOT NULL DROP TABLE {DatabaseConfig.TableExitData};
@@ -165,38 +165,86 @@ namespace BridgeVueApp.Database
                             CONSTRAINT FK_Exit_Student FOREIGN KEY (StudentID) REFERENCES {DatabaseConfig.TableStudentProfile}(StudentID) ON DELETE CASCADE
                         );
 
+                        -- 1) Every training run (one row per run/model artifact)
                         CREATE TABLE {DatabaseConfig.TableModelPerformance} (
-                            ModelID INT IDENTITY(1,1) PRIMARY KEY,
-                            TrainingDate DATETIME2,
-                            ModelName NVARCHAR(100),
-                            ModelType NVARCHAR(100),
-                            Hyperparameters NVARCHAR(500),
-                            TrainingDuration INT,  -- Duration in seconds
-                            Accuracy FLOAT,
-                            F1Score FLOAT,
-                            AUC FLOAT,
-                            [Precision] FLOAT,
-                            Recall FLOAT,
-                            TrainingDataSize INT,
-                            TestDataSize INT,
-                            IsCurrentBest BIT,
-                            ModelFilePath NVARCHAR(500)
-                        );
+                            ModelID             INT IDENTITY(1,1) PRIMARY KEY,
+                            TrainingDate        DATETIME2(3) NOT NULL CONSTRAINT DF_ModelPerf_TrainingDate DEFAULT SYSUTCDATETIME(),
+                            ModelName           NVARCHAR(100) NOT NULL,
+                            ModelType           NVARCHAR(100) NOT NULL,         -- e.g., ""ML.NET BinaryClassification""
+                            Hyperparameters     NVARCHAR(MAX) NULL,             -- JSON string
+                            TrainingDurationSec INT NULL,
+                            Accuracy            DECIMAL(5,4) NULL CHECK (Accuracy BETWEEN 0 AND 1),
+                            F1Score             DECIMAL(5,4) NULL CHECK (F1Score BETWEEN 0 AND 1),
+                            AUC                 DECIMAL(5,4) NULL CHECK (AUC BETWEEN 0 AND 1),
+                            [Precision]         DECIMAL(5,4) NULL CHECK ([Precision] BETWEEN 0 AND 1),
+                            Recall              DECIMAL(5,4) NULL CHECK (Recall BETWEEN 0 AND 1),
+                            TrainingDataSize    INT NULL CHECK (TrainingDataSize >= 0),
+                            TestDataSize        INT NULL CHECK (TestDataSize >= 0),
+                            IsCurrentBest       BIT NOT NULL CONSTRAINT DF_ModelPerf_IsCurrentBest DEFAULT 0,
+                            ModelFilePath       NVARCHAR(500) NULL
+);
 
+                        -- 2) Time series metrics for drift/tracking (append-only)
                         CREATE TABLE {DatabaseConfig.TableModelMetricsHistory} (
-                            MetricID INT IDENTITY(1,1) PRIMARY KEY,
-                            ModelID INT,  -- Foreign key referencing ModelPerformance
-                            Accuracy FLOAT,
-                            F1Score FLOAT,
-                            AUC FLOAT,
-                            Precision FLOAT,
-                            Recall FLOAT,
-                            Timestamp DATETIME2
-                            CONSTRAINT FK_ModelPerf_MetricsHist FOREIGN KEY (ModelID) REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID) ON DELETE CASCADE
+                            MetricID    INT IDENTITY(1,1) PRIMARY KEY,
+                            ModelID     INT NOT NULL,
+                            Accuracy    DECIMAL(5,4) NULL CHECK (Accuracy BETWEEN 0 AND 1),
+                            F1Score     DECIMAL(5,4) NULL CHECK (F1Score BETWEEN 0 AND 1),
+                            AUC         DECIMAL(5,4) NULL CHECK (AUC BETWEEN 0 AND 1),
+                            [Precision] DECIMAL(5,4) NULL CHECK ([Precision] BETWEEN 0 AND 1),
+                            Recall      DECIMAL(5,4) NULL CHECK (Recall BETWEEN 0 AND 1),
+                            [Timestamp] DATETIME2(3) NOT NULL CONSTRAINT DF_ModelMetricsHistory_Timestamp DEFAULT SYSUTCDATETIME(),
+                            CONSTRAINT FK_ModelPerf_MetricsHist
+                                FOREIGN KEY (ModelID)
+                                REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID)
+                                ON DELETE CASCADE
+);
+
+                        -- A reproducible snapshot descriptor of the training/test sets used
+                        CREATE TABLE {DatabaseConfig.TableDatasetSnapshot} (
+                            SnapshotID          INT IDENTITY(1,1) PRIMARY KEY,
+                            CreatedAtUtc        DATETIME2(3) NOT NULL CONSTRAINT DF_DatasetSnapshot_Created DEFAULT SYSUTCDATETIME(),
+                            SourceView          NVARCHAR(200) NOT NULL,           -- e.g., 'dbo.vStudentMLData'
+                            SelectionQuery      NVARCHAR(MAX) NOT NULL,           -- the SELECT or filter JSON used
+                            [RowCount]          INT NOT NULL CHECK ([RowCount] >= 0),
+                            MinRecordID         INT NULL,
+                            MaxRecordID         INT NULL,
+                            FeatureSchemaHash   CHAR(64) NULL,                    -- SHA-256 of column list/order
+                            DataContentHash     CHAR(64) NULL,                    -- SHA-256 over stable serialization
+                            Notes               NVARCHAR(500) NULL
                         );
 
+                        -- Junction table: which snapshot(s) a model used for training & testing
+                        CREATE TABLE {DatabaseConfig.TableModelDataUsage} (
+                            ModelID     INT NOT NULL,
+                            SnapshotID  INT NOT NULL,
+                            Role        VARCHAR(12) NOT NULL CHECK (Role IN ('TRAIN','TEST','VALIDATION')),
+                            PRIMARY KEY (ModelID, SnapshotID, Role),
+                            CONSTRAINT FK_ModelDataUsage_Model
+                                FOREIGN KEY (ModelID) REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID) ON DELETE CASCADE,
+                            CONSTRAINT FK_ModelDataUsage_Snapshot
+                                FOREIGN KEY (SnapshotID) REFERENCES {DatabaseConfig.TableDatasetSnapshot}(SnapshotID) ON DELETE CASCADE
+                        );
+
+                        CREATE TABLE {DatabaseConfig.TableInferenceLog} (
+                            InferenceID     BIGINT IDENTITY(1,1) PRIMARY KEY,
+                            ModelID         INT NOT NULL,
+                            PredictedLabel  NVARCHAR(50) NOT NULL,
+                            PredictedScore  DECIMAL(6,5) NULL,
+                            ActualLabel     NVARCHAR(50) NULL,           -- backfilled later
+                            IsCorrect       AS (CASE WHEN ActualLabel IS NULL THEN NULL
+                                                     WHEN ActualLabel = PredictedLabel THEN 1 ELSE 0 END) PERSISTED,
+                            EntityKey       NVARCHAR(100) NULL,          -- e.g., StudentID:Timestamp
+                            CreatedAtUtc    DATETIME2(3) NOT NULL CONSTRAINT DF_InferenceLog_Created DEFAULT SYSUTCDATETIME(),
+                            CONSTRAINT FK_InferenceLog_Model
+                                FOREIGN KEY (ModelID) REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID) ON DELETE NO ACTION
+                        );
+                        
 
 
+
+                        CREATE INDEX IX_InferenceLog_ModelID_Created ON {DatabaseConfig.TableInferenceLog}(ModelID, CreatedAtUtc);
+                        CREATE INDEX IX_ModelMetricsHistory_ModelID_Timestamp ON {DatabaseConfig.TableModelMetricsHistory}(ModelID, [Timestamp]);
                         CREATE INDEX IX_Intake_StudentID ON {DatabaseConfig.TableIntakeData}(StudentID);
                         CREATE INDEX IX_Behavior_StudentID_Timestamp ON {DatabaseConfig.TableDailyBehavior}(StudentID, Timestamp);
                         CREATE INDEX IX_Exit_StudentID ON {DatabaseConfig.TableExitData}(StudentID);
@@ -206,12 +254,12 @@ namespace BridgeVueApp.Database
                     new SqlCommand(sql, conn).ExecuteNonQuery();
 
                     CreateViews(conn, progress);
-                    progress?.Report("✅ Tables and views created successfully.");
+                    progress?.Report("Tables and views created successfully.");
                 }
             }
             catch (Exception ex)
             {
-                progress?.Report($"❌ Error creating tables: {ex.Message}");
+                progress?.Report($"Error creating tables: {ex.Message}");
                 throw;
             }
         }
@@ -221,7 +269,7 @@ namespace BridgeVueApp.Database
             try
             {
                 string mlView = $@"
-                    CREATE OR ALTER VIEW {DatabaseConfig.vStudentMLData} AS
+                    CREATE OR ALTER VIEW {DatabaseConfig.vStudentMLDataRaw} AS
                     WITH Beh AS (
                         SELECT
                             db.StudentID,
@@ -248,6 +296,11 @@ namespace BridgeVueApp.Database
                         sp.EthnicityNumeric,
                         sp.SpecialEd,
                         sp.IEP,
+                        sp.DidSucceed,
+                            CASE 
+                                WHEN sp.DidSucceed IS NOT NULL THEN 1 
+                                ELSE 0 
+                            END AS HasKnownOutcome,
                     
                         i.EntryReasonNumeric,
                         i.PriorIncidents,
@@ -288,7 +341,7 @@ namespace BridgeVueApp.Database
 
                 using (var createMLView = new SqlCommand(mlView, conn))
                     createMLView.ExecuteNonQuery();
-                progress?.Report("📊 View vStudentMLData created.");
+                progress?.Report("View vStudentMLData created.");
 
                 string predictionView = $@"
                     CREATE OR ALTER VIEW {DatabaseConfig.vStudentPredictionData} AS
@@ -303,11 +356,11 @@ namespace BridgeVueApp.Database
 
                 using (var createPredView = new SqlCommand(predictionView, conn))
                     createPredView.ExecuteNonQuery();
-                progress?.Report("📊 View vStudentPredictionData created.");
+                progress?.Report("View vStudentPredictionData created.");
             }
             catch (Exception ex)
             {
-                progress?.Report($"⚠️ Error creating views: {ex.Message}");
+                progress?.Report($"Error creating views: {ex.Message}");
                 throw;
             }
         }

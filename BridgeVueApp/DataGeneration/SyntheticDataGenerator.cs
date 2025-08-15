@@ -31,7 +31,7 @@ namespace BridgeVueApp.DataGeneration
                 .RuleFor(s => s.DidSucceed, (f, s) => null as bool?)
                 .RuleFor(s => s.CreatedDate, (f, s) => DateTime.UtcNow)
                 .RuleFor(s => s.ModifiedDate, (f, s) => DateTime.UtcNow);
-
+                
             for (int i = 0; i < count; i++)
             {
                 if (i % 5 == 0)
@@ -106,7 +106,7 @@ namespace BridgeVueApp.DataGeneration
 
             foreach (var student in students)
             {
-                var intake = intakeList.FirstOrDefault(i => i.StudentID == student.StudentID);
+                var intake = intakeList.FirstOrDefault(i => i.StudentLocalKey == student.LocalKey); // FIX: LocalKey
                 if (intake == null) continue;
 
                 int numDays = faker.Random.Int(5, 15);
@@ -127,7 +127,7 @@ namespace BridgeVueApp.DataGeneration
                     var record = new DailyBehavior
                     {
                         BehaviorID = behaviorId++,
-                        StudentLocalKey = student.LocalKey, // Link to StudentProfile
+                        StudentLocalKey = student.LocalKey, // keep LocalKey
                         Timestamp = start.AddDays(day).AddHours(faker.Random.Int(8, 15)),
                         Level = faker.Random.Int(1, 5),
                         Step = faker.Random.Int(1, 3),
@@ -160,13 +160,14 @@ namespace BridgeVueApp.DataGeneration
         }
 
 
+
         // Generates weekly emotion data based on daily behaviors
         public static List<DailyBehavior> GenerateWeeklyEmotionData(List<DailyBehavior> behaviorList, IProgress<string> progress = null)
         {
             progress?.Report("📅 Generating weekly emotion check-ins...");
 
             var rand = new Random();
-            var groupedByStudent = behaviorList.GroupBy(b => b.StudentID);
+            var groupedByStudent = behaviorList.GroupBy(b => b.StudentLocalKey); // FIX
 
             foreach (var group in groupedByStudent)
             {
@@ -175,25 +176,18 @@ namespace BridgeVueApp.DataGeneration
                 for (int i = 0; i < orderedDays.Count; i += 5)
                 {
                     var window = orderedDays.Skip(i).Take(5).ToList();
+                    if (window.Count == 0) continue;
 
-                    if (window.Count == 0)
-                        continue;
-
-                    // Compute a weighted score from the last 5 days
                     double redZoneCount = window.Count(b => b.ZoneOfRegulation == "Red");
                     double totalAggression = window.Sum(b => b.VerbalAggression + b.PhysicalAggression);
                     double avgEngagement = window.Average(b => b.AcademicEngagement);
                     double avgEmotionScore = (redZoneCount * 2 + totalAggression - avgEngagement) / 5.0;
 
                     string emotion;
-                    if (avgEmotionScore > 2.5)
-                        emotion = rand.NextDouble() < 0.7 ? "Angry" : "Sad";
-                    else if (avgEmotionScore > 1.5)
-                        emotion = "Anxious";
-                    else if (avgEmotionScore > 0.5)
-                        emotion = rand.NextDouble() < 0.7 ? "Calm" : "Happy";
-                    else
-                        emotion = "Happy";
+                    if (avgEmotionScore > 2.5) emotion = rand.NextDouble() < 0.7 ? "Angry" : "Sad";
+                    else if (avgEmotionScore > 1.5) emotion = "Anxious";
+                    else if (avgEmotionScore > 0.5) emotion = rand.NextDouble() < 0.7 ? "Calm" : "Happy";
+                    else emotion = "Happy";
 
                     var record = window.First();
                     record.WeeklyEmotionDate = record.Timestamp.Date;
@@ -205,7 +199,106 @@ namespace BridgeVueApp.DataGeneration
             progress?.Report("✅ Weekly emotion check-ins generated.");
             return behaviorList;
         }
-    
+
+
+
+        private const double KnownOutcomeRate = 0.85; // ~85% labeled now
+        private static readonly Random OutcomeRand = new Random(123);
+
+        // Logistic helper
+        private static double Logistic(double z) => 1.0 / (1.0 + Math.Exp(-z));
+
+        // Compute success probability from Intake + optional Behavior aggregates
+        private static double ComputeSuccessProbability(
+            IntakeData i,
+            (double? avgAggression, double? avgEngagement, double? avgRegulation, double? redZonePct)? beh = null)
+        {
+            // Normalize inputs
+            double fam = i.FamilySupportNormalized;          // 0..1
+            double acad = i.AcademicAbilityNormalized;       // 0..1
+            double emo = i.EmotionalRegulationNormalized;   // 0..1
+            double stress = i.StudentStressLevelNormalized;  // 0..1
+            double risk01 = Math.Clamp(i.RiskScore / 10.0, 0.0, 1.0); // RiskScore is 0..10 -> 0..1
+            double incidents = Math.Min(i.PriorIncidents, 15);
+
+            // Base linear model from Intake
+            double z = -0.4
+                     + 0.8 * fam
+                     + 0.8 * acad
+                     + 0.6 * emo
+                     - 0.7 * stress
+                     - 0.8 * risk01
+                     - 0.10 * incidents;
+
+            // Optional behavior nudges if available
+            if (beh.HasValue)
+            {
+                var (avgAgg, avgEng, avgReg, redPct) = beh.Value;
+                if (avgEng.HasValue) z += 0.25 * (avgEng.Value / 3.0);          // AcademicEngagement 0..3
+                if (avgReg.HasValue) z += 0.20 * (avgReg.Value / 3.0);          // EmotionalRegulation 0..3
+                if (avgAgg.HasValue) z -= 0.20 * avgAgg.Value;                  // agg count per day proxy
+                if (redPct.HasValue) z -= 0.30 * redPct.Value;                  // 0..1
+            }
+
+            double p = Logistic(z);
+            // small noise so it's not overly deterministic
+            p = Math.Clamp(p + (OutcomeRand.NextDouble() * 0.06 - 0.03), 0.02, 0.98);
+            return p;
+        }
+
+        // Assign DidSucceed/HasKnownOutcome after Intake & Behavior exist
+        private static void AssignOutcomes(
+            List<StudentProfile> students,
+            List<IntakeData> intake,
+            List<DailyBehavior> behavior)
+        {
+            // Pre-aggregate behavior by student (LocalKey)
+            var behByStudent = behavior
+                .GroupBy(b => b.StudentLocalKey)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var list = g.ToList();
+                        double days = Math.Max(1, list.Select(b => b.Timestamp.Date).Distinct().Count());
+                        double avgAgg = list.Average(b => b.VerbalAggression + b.PhysicalAggression); // per day-ish
+                        double avgEng = list.Average(b => b.AcademicEngagement); // 0..3
+                        double avgReg = list.Average(b => b.EmotionalRegulation); // 0..3
+                        double redPct = list.Count == 0 ? 0 : list.Count(b => b.ZoneOfRegulation == "Red") * 1.0 / list.Count;
+                        return (avgAgg, avgEng, avgReg, redPct);
+                    });
+
+            foreach (var s in students)
+            {
+                var i = intake.FirstOrDefault(x => x.StudentLocalKey == s.LocalKey);
+                if (i == null)
+                {
+                    // No intake? leave unlabeled
+                    s.HasKnownOutcome = false;
+                    s.DidSucceed = null;
+                    continue;
+                }
+
+                behByStudent.TryGetValue(s.LocalKey, out var behAgg);
+
+                // Decide if this student currently has a known outcome
+                bool known = OutcomeRand.NextDouble() < KnownOutcomeRate;
+
+                if (!known)
+                {
+                    s.HasKnownOutcome = false;
+                    s.DidSucceed = null;
+                    continue;
+                }
+
+                double p = ComputeSuccessProbability(i, behAgg);
+                bool succ = OutcomeRand.NextDouble() < p;
+
+                s.HasKnownOutcome = true;
+                s.DidSucceed = succ;
+            }
+        }
+
 
 
 
@@ -216,91 +309,62 @@ namespace BridgeVueApp.DataGeneration
             var exitList = new List<ExitData>();
             var faker = new Faker();
 
-            float totalImprovement = 0;
-            float totalEffectiveness = 0;
-            float totalAggression = 0;
-            float totalEngagement = 0;
-            float totalRedZone = 0;
-            int outcomeCount = 0;
-
             foreach (var student in students)
             {
-                if (faker.Random.Bool(0.8f)) // 80% of students get exit data
+                if (!faker.Random.Bool(0.8f)) continue; // 80% get exit data
+
+                // Mirror success when known, otherwise synthesize from generic logic
+                bool success = student.DidSucceed ?? faker.Random.Bool(0.6f);
+
+                int lengthOfStay = faker.Random.Int(7, 45);
+                string entryAcademic = faker.PickRandom("Below Grade", "At Grade", "Above Grade");
+                string exitAcademic = DataGenerationUtils.CalculateExitAcademicLevel(entryAcademic, success ? 0.7f : 0.3f);
+                string entrySocial = faker.PickRandom("Low", "Medium", "High");
+                string exitSocial = DataGenerationUtils.CalculateExitSocialSkillsLevel(entrySocial, success ? 0.7f : 0.3f);
+
+                string outcomeLabel = success ? "Completed Program" : faker.PickRandom("Transferred", "Exited Early", "Other");
+
+                var exit = new ExitData
                 {
-                    var intake = faker.PickRandom(students.Where(s => s.StudentID == student.StudentID));
-                    float improvementScore = faker.Random.Float(0.0f, 1.0f);
-                    float riskFactor = faker.Random.Float(0.0f, 1.0f);
-                    float programEffectiveness = faker.Random.Float(0.0f, 1.0f);
-                    float familySupport = faker.Random.Float(0.0f, 1.0f);
-                    int behaviorDays = faker.Random.Int(10, 40);
+                    StudentLocalKey = student.LocalKey,
+                    ExitReason = outcomeLabel,
+                    ExitReasonNumeric = DataGenerationUtils.GetExitReasonNumeric(outcomeLabel),
+                    ExitDate = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 5)),
+                    LengthOfStay = lengthOfStay,
+                    ExitAcademicLevel = exitAcademic,
+                    ExitAcademicLevelNumeric = DataGenerationUtils.GetAcademicLevelNumeric(exitAcademic),
+                    ExitSocialSkillsLevel = exitSocial,
+                    ExitSocialSkillsLevelNumeric = DataGenerationUtils.GetSocialSkillsLevelNumeric(exitSocial),
+                    AcademicImprovement = faker.Random.Int(0, 2),
+                    SocialSkillsImprovement = faker.Random.Int(0, 2),
+                    OverallImprovementScore = success ? faker.Random.Float(0.5f, 1.0f) : faker.Random.Float(0.0f, 0.6f),
+                    ProgramEffectivenessScore = success ? faker.Random.Float(0.5f, 1.0f) : faker.Random.Float(0.0f, 0.6f),
+                    SuccessIndicator = success,
+                    CreatedDate = DateTime.UtcNow,
+                    ModifiedDate = DateTime.UtcNow
+                };
 
-                    float avgAggression = faker.Random.Float(0.0f, 1.0f);
-                    float avgEngagement = faker.Random.Float(0.0f, 1.0f);
-                    float redZonePercent = faker.Random.Float(0.0f, 1.0f);
-
-                    string predictedOutcome = DataGenerationUtils.PredictOutcome(
-                        avgAggression,
-                        avgEngagement,
-                        redZonePercent,
-                        improvementScore,
-                        riskFactor,
-                        programEffectiveness,
-                        familySupport,
-                        behaviorDays
-                    );
-
-                    int lengthOfStay = DataGenerationUtils.CalculateLengthOfStay(predictedOutcome, improvementScore, riskFactor);
-                    string entryAcademic = faker.PickRandom("Below Grade", "At Grade", "Above Grade");
-                    string exitAcademic = DataGenerationUtils.CalculateExitAcademicLevel(entryAcademic, improvementScore);
-                    string entrySocial = faker.PickRandom("Low", "Medium", "High");
-                    string exitSocial = DataGenerationUtils.CalculateExitSocialSkillsLevel(entrySocial, improvementScore);
-
-                    var exit = new ExitData
-                    {
-                        StudentLocalKey = student.LocalKey, // Link to StudentProfile
-                        ExitReason = predictedOutcome,
-                        ExitReasonNumeric = DataGenerationUtils.GetExitReasonNumeric(predictedOutcome),
-                        ExitDate = DateTime.UtcNow.AddDays(-faker.Random.Int(1, 5)),
-                        LengthOfStay = lengthOfStay,
-                        ExitAcademicLevel = exitAcademic,
-                        ExitAcademicLevelNumeric = DataGenerationUtils.GetAcademicLevelNumeric(exitAcademic),
-                        ExitSocialSkillsLevel = exitSocial,
-                        ExitSocialSkillsLevelNumeric = DataGenerationUtils.GetSocialSkillsLevelNumeric(exitSocial),
-                        AcademicImprovement = faker.Random.Int(0, 2),
-                        SocialSkillsImprovement = faker.Random.Int(0, 2),
-                        OverallImprovementScore = improvementScore,
-                        ProgramEffectivenessScore = programEffectiveness,
-                        SuccessIndicator = DataGenerationUtils.GetSuccessIndicator(predictedOutcome) == 1,
-                        CreatedDate = DateTime.UtcNow,
-                        ModifiedDate = DateTime.UtcNow
-                    };
-
-                    exitList.Add(exit);
-
-                    // Tracking for summary report
-                    totalImprovement += improvementScore;
-                    totalEffectiveness += programEffectiveness;
-                    totalAggression += avgAggression;
-                    totalEngagement += avgEngagement;
-                    totalRedZone += redZonePercent;
-                    outcomeCount++;
-                }
+                exitList.Add(exit);
             }
-
-
 
             progress?.Report("Exit data generated.");
             return exitList;
         }
 
 
+
         public static void GenerateSyntheticData(IProgress<string> progress)
         {
-            progress?.Report("⏳ Starting synthetic data generation...");
+            progress?.Report("Starting synthetic data generation...");
 
             var students = GenerateStudentProfiles(50, progress);
             var intake = GenerateIntakeData(students, progress);
             var behavior = GenerateDailyBehavior(students, intake, progress);
+            behavior = GenerateWeeklyEmotionData(behavior, progress); // optional but fine
+
+            // NEW: assign outcomes using Intake (+ Behavior)
+            AssignOutcomes(students, intake, behavior);
+
             var exit = GenerateExitData(students, progress);
 
             DataGenerationUtils.GeneratedProfiles = students;
@@ -308,15 +372,14 @@ namespace BridgeVueApp.DataGeneration
             DataGenerationUtils.GeneratedBehavior = behavior;
             DataGenerationUtils.GeneratedExitData = exit;
 
-            // Optional: compute summary and assign
             DataGenerationUtils.LastExitSummary = new ExitSummary
             {
                 Count = exit.Count,
                 AvgImprovement = exit.Average(e => e.OverallImprovementScore),
                 AvgEffectiveness = exit.Average(e => e.ProgramEffectivenessScore),
-                AvgAggression = exit.Average(e => e.OverallImprovementScore), // Replace with real aggression metric if tracked
-                AvgEngagement = exit.Average(e => e.ProgramEffectivenessScore), // Replace with real engagement metric
-                AvgRedZonePercent = 0f // Placeholder
+                AvgAggression = exit.Average(e => e.OverallImprovementScore), // TODO replace with real aggression metric if tracked
+                AvgEngagement = exit.Average(e => e.ProgramEffectivenessScore), // TODO replace
+                AvgRedZonePercent = 0f
             };
 
             Console.WriteLine($"Generated Profiles: {DataGenerationUtils.GeneratedProfiles.Count}");
@@ -324,8 +387,12 @@ namespace BridgeVueApp.DataGeneration
             Console.WriteLine($"Generated Behavior: {DataGenerationUtils.GeneratedBehavior.Count}");
             Console.WriteLine($"Generated Exit: {DataGenerationUtils.GeneratedExitData.Count}");
 
-            progress?.Report("✅ Synthetic data generation completed successfully.");
+            progress?.Report("Synthetic data generation completed successfully.");
         }
+
+
+
+
 
         public class ExitSummary
         {

@@ -4,25 +4,26 @@ namespace BridgeVueApp.MachineLearning
 {
     public class ModelInput
     {
-        public int Grade { get; set; }
-        public int Age { get; set; }
-        public int GenderNumeric { get; set; }
-        public int EthnicityNumeric { get; set; }
+        public float Grade { get; set; }
+        public float Age { get; set; }
+        public float GenderNumeric { get; set; }
+        public float EthnicityNumeric { get; set; }
+        public float EntryReasonNumeric { get; set; }
+        public float PriorIncidents { get; set; }
+        public float OfficeReferrals { get; set; }
+        public float Suspensions { get; set; }
+        public float Expulsions { get; set; }
+        public float EntryAcademicLevelNumeric { get; set; }
+        public float SmallGroups { get; set; }
+        public float SocialWorkerVisits { get; set; }
+        public float PsychologistVisits { get; set; }
+        public float EntrySocialSkillsLevelNumeric { get; set; }
+        public float BehaviorDays { get; set; }
         public bool SpecialEd { get; set; }
         public bool IEP { get; set; }
-        public int EntryReasonNumeric { get; set; }
-        public int PriorIncidents { get; set; }
-        public int OfficeReferrals { get; set; }
-        public int Suspensions { get; set; }
-        public int Expulsions { get; set; }
-        public int EntryAcademicLevelNumeric { get; set; }
         public bool CheckInOut { get; set; }
         public bool StructuredRecess { get; set; }
         public bool StructuredBreaks { get; set; }
-        public int SmallGroups { get; set; }
-        public int SocialWorkerVisits { get; set; }
-        public int PsychologistVisits { get; set; }
-        public int EntrySocialSkillsLevelNumeric { get; set; }
         public float RiskScore { get; set; }
         public float StudentStressLevelNormalized { get; set; }
         public float FamilySupportNormalized { get; set; }
@@ -39,7 +40,7 @@ namespace BridgeVueApp.MachineLearning
         public float YellowZonePct { get; set; }
         public float BlueZonePct { get; set; }
         public float GreenZonePct { get; set; }
-        public int BehaviorDays { get; set; }
+        
 
         [LoadColumn(999)] // ML.NET needs this to mark the prediction target
         public bool DidSucceed { get; set; }
