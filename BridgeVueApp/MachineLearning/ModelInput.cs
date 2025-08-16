@@ -43,7 +43,7 @@ namespace BridgeVueApp.MachineLearning
         
 
         [LoadColumn(999)] // ML.NET needs this to mark the prediction target
-        public bool DidSucceed { get; set; }
+        public string ExitReason { get; set; } = "";
     }
 }
 

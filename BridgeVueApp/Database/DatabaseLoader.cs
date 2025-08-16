@@ -1,12 +1,13 @@
 ﻿// DatabaseLoader.cs
+using BridgeVueApp.Database;
+using BridgeVueApp.DataGeneration;
+using BridgeVueApp.Models;
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using Microsoft.Data.SqlClient;
-using BridgeVueApp.Models;
-using BridgeVueApp.Database;
 
 namespace BridgeVueApp.Database
 {
@@ -86,6 +87,23 @@ namespace BridgeVueApp.Database
         {
             if (exitList == null || exitList.Count == 0) return;
 
+            // Normalize to the 5 canonical labels and set numeric/success fields
+            CanonicalizeExitRows(exitList);
+
+            // --- Defensive guard: put it RIGHT HERE (before any DB work) ---
+            var nonCanonical = exitList
+                .Where(x => !DataGenerationUtils.IsCanonicalExitReason(x.ExitReason))
+                .Select(x => new { x.StudentID, x.ExitReason })
+                .Take(5)
+                .ToList();
+
+            if (nonCanonical.Count > 0)
+                throw new InvalidOperationException(
+                    "Non-canonical ExitReason detected: " +
+                    string.Join(", ", nonCanonical.Select(n => $"Student {n.StudentID}: '{n.ExitReason}'"))
+                );
+            // ---------------------------------------------------------------
+
             using var conn = new SqlConnection(DatabaseConfig.FullConnection);
             conn.Open();
             DebugWriteCurrentDb(conn);
@@ -94,7 +112,7 @@ namespace BridgeVueApp.Database
             try
             {
                 AssertStudentIdsExist(conn, tx, exitList.Select(x => x.StudentID), DatabaseConfig.TableExitData);
-                BulkInsertExitData(conn, tx, exitList);
+                BulkInsertExitData(conn, tx, exitList);   // your existing inner bulk insert
                 tx.Commit();
             }
             catch
@@ -103,6 +121,7 @@ namespace BridgeVueApp.Database
                 throw;
             }
         }
+
 
         // =========================
         // Transaction-friendly overloads
@@ -115,13 +134,13 @@ namespace BridgeVueApp.Database
             foreach (var p in profiles)
             {
                 var sql = $@"
-INSERT INTO {DatabaseConfig.TableStudentProfile}
-(FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
- Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed, CreatedDate, ModifiedDate)
-OUTPUT INSERTED.StudentID
-VALUES
-(@FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric,
- @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed, @CreatedDate, @ModifiedDate);";
+                INSERT INTO {DatabaseConfig.TableStudentProfile}
+                (FirstName, LastName, Grade, Age, Gender, GenderNumeric, 
+                 Ethnicity, EthnicityNumeric, SpecialEd, IEP, HasKnownOutcome, DidSucceed, CreatedDate, ModifiedDate)
+                OUTPUT INSERTED.StudentID
+                VALUES
+                (@FirstName, @LastName, @Grade, @Age, @Gender, @GenderNumeric,
+                 @Ethnicity, @EthnicityNumeric, @SpecialEd, @IEP, @HasKnownOutcome, @DidSucceed, @CreatedDate, @ModifiedDate);";
 
                 using var cmd = CreateCommand(conn, tx, sql);
                 AddParam(cmd, "@FirstName", SqlDbType.NVarChar, p.FirstName, 100);
@@ -153,20 +172,20 @@ VALUES
             foreach (var i in intakeList)
             {
                 var sql = $@"
-INSERT INTO {DatabaseConfig.TableIntakeData}
-(StudentID, EntryReason, EntryReasonNumeric, PriorIncidents,
- OfficeReferrals, Suspensions, Expulsions, EntryAcademicLevel, EntryAcademicLevelNumeric,
- CheckInOut, StructuredRecess, StructuredBreaks, SmallGroups, SocialWorkerVisits,
- PsychologistVisits, EntrySocialSkillsLevel, EntrySocialSkillsLevelNumeric, EntryDate,
- RiskScore, StudentStressLevelNormalized, FamilySupportNormalized, AcademicAbilityNormalized,
- EmotionalRegulationNormalized, CreatedDate, ModifiedDate)
-VALUES
-(@StudentID, @EntryReason, @EntryReasonNumeric, @PriorIncidents,
- @OfficeReferrals, @Suspensions, @Expulsions, @EntryAcademicLevel, @EntryAcademicLevelNumeric,
- @CheckInOut, @StructuredRecess, @StructuredBreaks, @SmallGroups, @SocialWorkerVisits,
- @PsychologistVisits, @EntrySocialSkillsLevel, @EntrySocialSkillsLevelNumeric, @EntryDate,
- @RiskScore, @StudentStressLevelNormalized, @FamilySupportNormalized, @AcademicAbilityNormalized,
- @EmotionalRegulationNormalized, @CreatedDate, @ModifiedDate);";
+                INSERT INTO {DatabaseConfig.TableIntakeData}
+                (StudentID, EntryReason, EntryReasonNumeric, PriorIncidents,
+                 OfficeReferrals, Suspensions, Expulsions, EntryAcademicLevel, EntryAcademicLevelNumeric,
+                 CheckInOut, StructuredRecess, StructuredBreaks, SmallGroups, SocialWorkerVisits,
+                 PsychologistVisits, EntrySocialSkillsLevel, EntrySocialSkillsLevelNumeric, EntryDate,
+                 RiskScore, StudentStressLevelNormalized, FamilySupportNormalized, AcademicAbilityNormalized,
+                 EmotionalRegulationNormalized, CreatedDate, ModifiedDate)
+                VALUES
+                (@StudentID, @EntryReason, @EntryReasonNumeric, @PriorIncidents,
+                 @OfficeReferrals, @Suspensions, @Expulsions, @EntryAcademicLevel, @EntryAcademicLevelNumeric,
+                 @CheckInOut, @StructuredRecess, @StructuredBreaks, @SmallGroups, @SocialWorkerVisits,
+                 @PsychologistVisits, @EntrySocialSkillsLevel, @EntrySocialSkillsLevelNumeric, @EntryDate,
+                 @RiskScore, @StudentStressLevelNormalized, @FamilySupportNormalized, @AcademicAbilityNormalized,
+                 @EmotionalRegulationNormalized, @CreatedDate, @ModifiedDate);";
 
                 using var cmd = CreateCommand(conn, tx, sql);
                 AddParam(cmd, "@StudentID", SqlDbType.Int, i.StudentID); // use BigInt if schema requires
@@ -206,20 +225,20 @@ VALUES
             foreach (var b in behaviors)
             {
                 var sql = $@"
-INSERT INTO {DatabaseConfig.TableDailyBehavior}
-(StudentID, [Timestamp], Level, Step, VerbalAggression,
- PhysicalAggression, Elopement, OutOfSpot, WorkRefusal, ProvokingPeers, InappropriateLanguage,
- OutOfLane, ZoneOfRegulation, ZoneOfRegulationNumeric, AcademicEngagement, SocialInteractions,
- EmotionalRegulation, StaffComments, WeeklyEmotionDate, WeeklyEmotionPictogram,
- WeeklyEmotionPictogramNumeric, AggressionRiskNormalized, EngagementLevelNormalized,
- DayInProgram, WeekInProgram, CreatedDate)
-VALUES
-(@StudentID, @Timestamp, @Level, @Step, @VerbalAggression,
- @PhysicalAggression, @Elopement, @OutOfSpot, @WorkRefusal, @ProvokingPeers, @InappropriateLanguage,
- @OutOfLane, @ZoneOfRegulation, @ZoneOfRegulationNumeric, @AcademicEngagement, @SocialInteractions,
- @EmotionalRegulation, @StaffComments, @WeeklyEmotionDate, @WeeklyEmotionPictogram,
- @WeeklyEmotionPictogramNumeric, @AggressionRiskNormalized, @EngagementLevelNormalized,
- @DayInProgram, @WeekInProgram, @CreatedDate);";
+                INSERT INTO {DatabaseConfig.TableDailyBehavior}
+                (StudentID, [Timestamp], Level, Step, VerbalAggression,
+                 PhysicalAggression, Elopement, OutOfSpot, WorkRefusal, ProvokingPeers, InappropriateLanguage,
+                 OutOfLane, ZoneOfRegulation, ZoneOfRegulationNumeric, AcademicEngagement, SocialInteractions,
+                 EmotionalRegulation, StaffComments, WeeklyEmotionDate, WeeklyEmotionPictogram,
+                 WeeklyEmotionPictogramNumeric, AggressionRiskNormalized, EngagementLevelNormalized,
+                 DayInProgram, WeekInProgram, CreatedDate)
+                VALUES
+                (@StudentID, @Timestamp, @Level, @Step, @VerbalAggression,
+                 @PhysicalAggression, @Elopement, @OutOfSpot, @WorkRefusal, @ProvokingPeers, @InappropriateLanguage,
+                 @OutOfLane, @ZoneOfRegulation, @ZoneOfRegulationNumeric, @AcademicEngagement, @SocialInteractions,
+                 @EmotionalRegulation, @StaffComments, @WeeklyEmotionDate, @WeeklyEmotionPictogram,
+                 @WeeklyEmotionPictogramNumeric, @AggressionRiskNormalized, @EngagementLevelNormalized,
+                 @DayInProgram, @WeekInProgram, @CreatedDate);";
 
                 using var cmd = CreateCommand(conn, tx, sql);
                 AddParam(cmd, "@StudentID", SqlDbType.Int, b.StudentID); // use BigInt if schema requires
@@ -260,16 +279,16 @@ VALUES
             foreach (var x in exitList)
             {
                 var sql = $@"
-INSERT INTO {DatabaseConfig.TableExitData}
-(StudentID, ExitReason, ExitReasonNumeric, ExitDate, LengthOfStay,
- ExitAcademicLevel, ExitAcademicLevelNumeric, ExitSocialSkillsLevel, ExitSocialSkillsLevelNumeric,
- AcademicImprovement, SocialSkillsImprovement, OverallImprovementScore, ProgramEffectivenessScore,
- SuccessIndicator, CreatedDate, ModifiedDate)
-VALUES
-(@StudentID, @ExitReason, @ExitReasonNumeric, @ExitDate, @LengthOfStay,
- @ExitAcademicLevel, @ExitAcademicLevelNumeric, @ExitSocialSkillsLevel, @ExitSocialSkillsLevelNumeric,
- @AcademicImprovement, @SocialSkillsImprovement, @OverallImprovementScore, @ProgramEffectivenessScore,
- @SuccessIndicator, @CreatedDate, @ModifiedDate);";
+                INSERT INTO {DatabaseConfig.TableExitData}
+                (StudentID, ExitReason, ExitReasonNumeric, ExitDate, LengthOfStay,
+                 ExitAcademicLevel, ExitAcademicLevelNumeric, ExitSocialSkillsLevel, ExitSocialSkillsLevelNumeric,
+                 AcademicImprovement, SocialSkillsImprovement, OverallImprovementScore, ProgramEffectivenessScore,
+                 SuccessIndicator, CreatedDate, ModifiedDate)
+                VALUES
+                (@StudentID, @ExitReason, @ExitReasonNumeric, @ExitDate, @LengthOfStay,
+                 @ExitAcademicLevel, @ExitAcademicLevelNumeric, @ExitSocialSkillsLevel, @ExitSocialSkillsLevelNumeric,
+                 @AcademicImprovement, @SocialSkillsImprovement, @OverallImprovementScore, @ProgramEffectivenessScore,
+                 @SuccessIndicator, @CreatedDate, @ModifiedDate);";
 
                 using var cmd = CreateCommand(conn, tx, sql);
                 AddParam(cmd, "@StudentID", SqlDbType.Int, x.StudentID); // use BigInt if schema requires
@@ -296,6 +315,52 @@ VALUES
         // =========================
         // Helpers
         // =========================
+
+        private static string NormalizeExitReason(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "Referred Out";
+            raw = raw.Trim();
+
+            // Map legacy / noisy values → canonical 5
+            switch (raw)
+            {
+                case "Completed Program":
+                case "Graduated":
+                case "Returned":
+                    return "Returned Successfully";
+
+                case "Exited Early":
+                case "Dropped Out":
+                case "ABSENT":
+                case "Withdrawal":
+                    return "ABS";
+
+                case "Other":
+                case "Referred":
+                case "Referral":
+                    return "Referred Out";
+            }
+
+            // Pass through if already canonical, fallback otherwise
+            return DataGenerationUtils.IsCanonicalExitReason(raw)
+                ? DataGenerationUtils.CanonicalExitReasons
+                    .First(c => c.Equals(raw, StringComparison.OrdinalIgnoreCase))
+                : "Referred Out";
+        }
+
+        private static void CanonicalizeExitRows(List<ExitData> rows)
+        {
+            foreach (var r in rows)
+            {
+                r.ExitReason = NormalizeExitReason(r.ExitReason);
+                r.ExitReasonNumeric = DataGenerationUtils.GetExitReasonNumeric(r.ExitReason);
+                r.SuccessIndicator = DataGenerationUtils.GetSuccessIndicator(r.ExitReason) == 1;
+                if (r.ExitDate == default) r.ExitDate = DateTime.UtcNow.Date;
+                if (r.LengthOfStay < 0) r.LengthOfStay = 0;
+            }
+        }
+
+
 
         private static SqlCommand CreateCommand(SqlConnection conn, SqlTransaction tx, string sql)
         {

@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static BridgeVueApp.MainForm;
@@ -37,9 +38,18 @@ namespace BridgeVueApp
 
             lblTrainStatus.Visible = false;
             lblTrainStatus.Text = "";
+
+
         }
 
+        private readonly BindingList<BatchProgressRow> _batchProgress = new BindingList<BatchProgressRow>();
 
+        private sealed class BatchProgressRow
+        {
+            public DateTime Time { get; set; }
+            public string Stage { get; set; } = "";
+            public string Message { get; set; } = "";
+        }
 
         private void btnPredictSatic_Click_1(object sender, EventArgs e)
         {
@@ -111,166 +121,199 @@ namespace BridgeVueApp
         // Method to predict a random student from the database
         private void PredictRandomStudent()
         {
+            // Load the same model Batch uses
+            var lm = BridgeVueApp.MachineLearning.BatchPredictor.LoadCurrentBest();
+
+            // Use the same feature view Batch uses
             string connString = "Server=localhost;Database=BridgeVue;Integrated Security=True;TrustServerCertificate=True;";
-            string sql = "SELECT TOP 1 * FROM vStudentMLTrainingData ORDER BY NEWID()";
+            string sql = "SELECT TOP 1 * FROM vStudentMLDataRaw ORDER BY NEWID()";
 
             using (SqlConnection conn = new SqlConnection(connString))
             {
                 conn.Open();
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
                 using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    if (reader.Read())
-                    {
-                        // Pull StudentID from DB row
-                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentID"));
-
-                        // Build input and predict
-                        var input = ModelInputFactory.FromReader(reader);
-                        var result = ML_Class_Success.Predict(input);
-
-                        // Top-1 class from score vector
-                        var (topIdx, confidence) = Top1(result.Score);
-
-                        // Map class index -> human label (guard if out of range)
-                        string predictedExitReason = topIdx >= 0
-                            ? MLLookups.Lookup(MLLookups.ExitReason, topIdx)
-                            : "Unknown";
-
-                        // Log the prediction to InferenceLog
-                        int modelId = GetCurrentBestModelId();
-                        PredictionLogger.LogPrediction(
-                            modelId,
-                            studentId.ToString(),
-                            predictedExitReason,
-                            confidence
-                        );
-
-                        
-
-                        // UI output (kept your formatting)
-                        rtbRandomPredictionOutput.Clear();
-                        rtbRandomPredictionOutput.Font = new Font("Consolas", 10);
-
-                        rtbRandomPredictionOutput.SelectionAlignment = HorizontalAlignment.Center;
-                        rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
-                        rtbRandomPredictionOutput.SelectionColor = Color.Blue;
-                        rtbRandomPredictionOutput.AppendText("EXIT REASON PREDICTION\n");
-                        rtbRandomPredictionOutput.AppendText("============================\n\n");
-
-                        rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 12, FontStyle.Bold);
-                        rtbRandomPredictionOutput.SelectionColor = predictedExitReason == "Graduated" ? Color.Green : Color.Orange;
-                        rtbRandomPredictionOutput.AppendText($"{predictedExitReason}\n[Confidence: {confidence:P1}]\n\n");
-
-
-                        //float modelAccuracy = 0.94f;
-
-                        // Student Summary Header
-                        rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
-                        rtbRandomPredictionOutput.SelectionColor = Color.Blue;
-                        rtbRandomPredictionOutput.AppendText("------------------------------\n");
-                        rtbRandomPredictionOutput.AppendText("   STUDENT SUMMARY\n");
-                        rtbRandomPredictionOutput.AppendText("------------------------------\n\n");
-
-                        // Left-align data with left padding
-                        rtbRandomPredictionOutput.SelectionAlignment = HorizontalAlignment.Left;
-                        string leftPadding = new string(' ', 6);
-
-                        // Define columns with lookup conversions
-                        string[] leftLabels = {
-                        "Grade:", "Age:", "Gender:", "Ethnicity:", "Special Ed:", "IEP:",
-                        "Entry Reason:", "Academic Level:", "Social Skills:", "Risk Score:"
-                };
-
-                        string[] leftValues = {
-                        input.Grade.ToString(),
-                        input.Age.ToString(),
-                        MLLookups.Lookup(MLLookups.Gender, Convert.ToInt32(input.GenderNumeric)),
-                        MLLookups.Lookup(MLLookups.Ethnicity, Convert.ToInt32(input.EthnicityNumeric)),
-                        input.SpecialEd ? "Yes" : "No",
-                        input.IEP ? "Yes" : "No",
-                        MLLookups.Lookup(MLLookups.EntryReason, Convert.ToInt32(input.EntryReasonNumeric)),
-                        MLLookups.Lookup(MLLookups.EntryAcademicLevel, Convert.ToInt32(input.EntryAcademicLevelNumeric)),
-                        MLLookups.Lookup(MLLookups.EntrySocialSkillsLevel, Convert.ToInt32(input.EntrySocialSkillsLevelNumeric)),
-                        input.RiskScore.ToString("F2")
-                };
-
-                        string[] rightLabels = {
-                        "Prior Incidents:", "Office Referrals:", "Suspensions:", "Expulsions:",
-                        "Avg Verbal Agg:", "Avg Physical Agg:", "Avg Engagement:", "Red Zone %:",
-                        "Green Zone %:", "Behavior Days:"
-                };
-
-                        string[] rightValues = {
-                        input.PriorIncidents.ToString(),
-                        input.OfficeReferrals.ToString(),
-                        input.Suspensions.ToString(),
-                        input.Expulsions.ToString(),
-                        input.AvgVerbalAggression.ToString("F2"),
-                        input.AvgPhysicalAggression.ToString("F2"),
-                        input.AvgAcademicEngagement.ToString("F2"),
-                        input.RedZonePct.ToString("P1"),
-                        input.GreenZonePct.ToString("P1"),
-                        input.BehaviorDays.ToString()
-                };
-
-                        int maxRows = Math.Max(leftLabels.Length, rightLabels.Length);
-
-                        for (int i = 0; i < maxRows; i++)
-                        {
-                            string leftLabel = i < leftLabels.Length ? leftLabels[i].PadRight(18) : "".PadRight(18);
-                            string leftValue = i < leftValues.Length ? leftValues[i] : "";
-
-                            string rightLabel = i < rightLabels.Length ? rightLabels[i].PadRight(18) : "".PadRight(18);
-                            string rightValue = i < rightValues.Length ? rightValues[i] : "";
-
-                            // Print left label in black
-                            rtbRandomPredictionOutput.SelectionColor = Color.Black;
-                            rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Regular);
-                            rtbRandomPredictionOutput.AppendText(leftPadding + leftLabel);
-
-                            // Print left value in black
-                            rtbRandomPredictionOutput.SelectionColor = Color.Black;
-                            rtbRandomPredictionOutput.AppendText(leftValue.PadRight(15));
-
-                            // Print right label in black
-                            rtbRandomPredictionOutput.SelectionColor = Color.Black;
-                            rtbRandomPredictionOutput.AppendText(rightLabel);
-
-                            // Apply coloring to right value
-                            if (i >= 4) // Behavior data
-                            {
-                                if (i == 4) // Verbal Aggression
-                                    rtbRandomPredictionOutput.SelectionColor = input.AvgVerbalAggression < 0.5f ? Color.Green : Color.Red;
-                                else if (i == 5) // Physical Aggression
-                                    rtbRandomPredictionOutput.SelectionColor = input.AvgPhysicalAggression < 0.5f ? Color.Green : Color.Red;
-                                else if (i == 6) // Engagement
-                                    rtbRandomPredictionOutput.SelectionColor = input.AvgAcademicEngagement >= 3.0f ? Color.Green : Color.Red;
-                                else if (i == 7) // Red Zone %
-                                    rtbRandomPredictionOutput.SelectionColor = input.RedZonePct < 0.25f ? Color.Orange : Color.Red;
-                                else if (i == 8) // Green Zone %
-                                    rtbRandomPredictionOutput.SelectionColor = input.GreenZonePct > 0.5f ? Color.Green : Color.Orange;
-                                else
-                                    rtbRandomPredictionOutput.SelectionColor = Color.Black;
-
-                                rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
-                            }
-                            else
-                            {
-                                rtbRandomPredictionOutput.SelectionColor = Color.Black;
-                                rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Regular);
-                            }
-
-                            rtbRandomPredictionOutput.AppendText(rightValue + "\n");
-                        }
-                    }
-                    else
+                    if (!reader.Read())
                     {
                         rtbRandomPredictionOutput.Text = "No student data found.";
+                        return;
+                    }
+
+                    // Helpers for safe reads
+                    int Ord(string name) => reader.GetOrdinal(name);
+                    bool Has(string name) { try { return reader.GetOrdinal(name) >= 0; } catch { return false; } }
+                    float F(string col) => reader.IsDBNull(Ord(col)) ? 0f : Convert.ToSingle(reader[col]);
+                    int I(string col) => reader.IsDBNull(Ord(col)) ? 0 : reader.GetInt32(Ord(col));
+                    bool B(string col) => !reader.IsDBNull(Ord(col)) && reader.GetBoolean(Ord(col));
+
+                    // Build the SAME PredictionInput schema Batch uses (floats/bools + ExitReason placeholder)
+                    var input = new BridgeVueApp.MachineLearning.PredictionInput // if your class is named PredictionInput, use that
+                    {
+                        StudentID = I("StudentID"),
+
+                        Grade = I("Grade"),
+                        Age = I("Age"),
+                        GenderNumeric = I("GenderNumeric"),
+                        EthnicityNumeric = I("EthnicityNumeric"),
+                        SpecialEd = B("SpecialEd"),
+                        IEP = B("IEP"),
+
+                        EntryReasonNumeric = I("EntryReasonNumeric"),
+                        PriorIncidents = I("PriorIncidents"),
+                        OfficeReferrals = I("OfficeReferrals"),
+                        Suspensions = I("Suspensions"),
+                        Expulsions = I("Expulsions"),
+
+                        EntryAcademicLevelNumeric = I("EntryAcademicLevelNumeric"),
+                        CheckInOut = B("CheckInOut"),
+                        StructuredRecess = B("StructuredRecess"),
+                        StructuredBreaks = B("StructuredBreaks"),
+                        SmallGroups = I("SmallGroups"),
+                        SocialWorkerVisits = I("SocialWorkerVisits"),
+                        PsychologistVisits = I("PsychologistVisits"),
+                        EntrySocialSkillsLevelNumeric = I("EntrySocialSkillsLevelNumeric"),
+
+                        RiskScore = F("RiskScore"),
+                        StudentStressLevelNormalized = F("StudentStressLevelNormalized"),
+                        FamilySupportNormalized = F("FamilySupportNormalized"),
+                        AcademicAbilityNormalized = F("AcademicAbilityNormalized"),
+                        EmotionalRegulationNormalized = F("EmotionalRegulationNormalized"),
+
+                        AvgVerbalAggression = Has("AvgVerbalAggression") ? F("AvgVerbalAggression") : 0f,
+                        AvgPhysicalAggression = Has("AvgPhysicalAggression") ? F("AvgPhysicalAggression") : 0f,
+                        AvgAcademicEngagement = Has("AvgAcademicEngagement") ? F("AvgAcademicEngagement") : 0f,
+                        AvgSocialInteractions = Has("AvgSocialInteractions") ? F("AvgSocialInteractions") : 0f,
+                        AvgEmotionalRegulation = Has("AvgEmotionalRegulation") ? F("AvgEmotionalRegulation") : 0f,
+                        AvgAggressionRisk = Has("AvgAggressionRisk") ? F("AvgAggressionRisk") : 0f,
+                        AvgEngagementLevel = Has("AvgEngagementLevel") ? F("AvgEngagementLevel") : 0f,
+
+                        RedZonePct = Has("RedZonePct") ? F("RedZonePct") : 0f,
+                        YellowZonePct = Has("YellowZonePct") ? F("YellowZonePct") : 0f,
+                        BlueZonePct = Has("BlueZonePct") ? F("BlueZonePct") : 0f,
+                        GreenZonePct = Has("GreenZonePct") ? F("GreenZonePct") : 0f,
+
+                        BehaviorDays = Has("BehaviorDays") ? I("BehaviorDays") : 0,
+
+                        // required by the saved pipeline even for prediction
+                        ExitReason = ""
+                    };
+
+                    // Predict using the SAME engine + labels as Batch
+                    var pred = BridgeVueApp.MachineLearning.BatchPredictor.PredictOne(lm, input);
+                    string predictedExitReason = pred.Label;
+                    float confidence = pred.Prob;
+
+                    // Log to inference table (use current-best ID)
+                    int modelId = GetCurrentBestModelId();
+                    PredictionLogger.LogPrediction(
+                        modelId,
+                        input.StudentID.ToString(),
+                        predictedExitReason,
+                        confidence
+                    );
+
+                    // ---------- UI rendering (unchanged except: use predictedExitReason/confidence directly) ----------
+                    rtbRandomPredictionOutput.Clear();
+                    rtbRandomPredictionOutput.Font = new Font("Consolas", 10);
+
+                    rtbRandomPredictionOutput.SelectionAlignment = HorizontalAlignment.Center;
+                    rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
+                    rtbRandomPredictionOutput.SelectionColor = Color.Blue;
+                    rtbRandomPredictionOutput.AppendText("EXIT REASON PREDICTION\n");
+                    rtbRandomPredictionOutput.AppendText("============================\n\n");
+
+                    rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 12, FontStyle.Bold);
+                    rtbRandomPredictionOutput.SelectionColor =
+                        predictedExitReason == "Returned Successfully" || predictedExitReason == "ACC"
+                        ? Color.Green : Color.Orange;
+                    rtbRandomPredictionOutput.AppendText($"{predictedExitReason}\n[Confidence: {confidence:P1}]\n\n");
+
+                    rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
+                    rtbRandomPredictionOutput.SelectionColor = Color.Blue;
+                    rtbRandomPredictionOutput.AppendText("------------------------------\n");
+                    rtbRandomPredictionOutput.AppendText("   STUDENT SUMMARY\n");
+                    rtbRandomPredictionOutput.AppendText("------------------------------\n\n");
+
+                    rtbRandomPredictionOutput.SelectionAlignment = HorizontalAlignment.Left;
+                    string leftPadding = new string(' ', 6);
+
+                    string[] leftLabels = {
+                "Grade:", "Age:", "Gender:", "Ethnicity:", "Special Ed:", "IEP:",
+                "Entry Reason:", "Academic Level:", "Social Skills:", "Risk Score:"
+            };
+
+                    string[] leftValues = {
+                input.Grade.ToString("0"),
+                input.Age.ToString("0"),
+                MLLookups.Lookup(MLLookups.Gender, Convert.ToInt32(input.GenderNumeric)),
+                MLLookups.Lookup(MLLookups.Ethnicity, Convert.ToInt32(input.EthnicityNumeric)),
+                input.SpecialEd ? "Yes" : "No",
+                input.IEP ? "Yes" : "No",
+                MLLookups.Lookup(MLLookups.EntryReason, Convert.ToInt32(input.EntryReasonNumeric)),
+                MLLookups.Lookup(MLLookups.EntryAcademicLevel, Convert.ToInt32(input.EntryAcademicLevelNumeric)),
+                MLLookups.Lookup(MLLookups.EntrySocialSkillsLevel, Convert.ToInt32(input.EntrySocialSkillsLevelNumeric)),
+                input.RiskScore.ToString("F2")
+            };
+
+                    string[] rightLabels = {
+                "Prior Incidents:", "Office Referrals:", "Suspensions:", "Expulsions:",
+                "Avg Verbal Agg:", "Avg Physical Agg:", "Avg Engagement:", "Red Zone %:",
+                "Green Zone %:", "Behavior Days:"
+            };
+
+                    string[] rightValues = {
+                input.PriorIncidents.ToString("0"),
+                input.OfficeReferrals.ToString("0"),
+                input.Suspensions.ToString("0"),
+                input.Expulsions.ToString("0"),
+                input.AvgVerbalAggression.ToString("F2"),
+                input.AvgPhysicalAggression.ToString("F2"),
+                input.AvgAcademicEngagement.ToString("F2"),
+                input.RedZonePct.ToString("P1"),
+                input.GreenZonePct.ToString("P1"),
+                input.BehaviorDays.ToString("0")
+            };
+
+                    int maxRows = Math.Max(leftLabels.Length, rightLabels.Length);
+                    for (int i = 0; i < maxRows; i++)
+                    {
+                        string leftLabel = i < leftLabels.Length ? leftLabels[i].PadRight(18) : "".PadRight(18);
+                        string leftValue = i < leftValues.Length ? leftValues[i] : "";
+                        string rightLabel = i < rightLabels.Length ? rightLabels[i].PadRight(18) : "".PadRight(18);
+                        string rightValue = i < rightValues.Length ? rightValues[i] : "";
+
+                        rtbRandomPredictionOutput.SelectionColor = Color.Black;
+                        rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Regular);
+                        rtbRandomPredictionOutput.AppendText(leftPadding + leftLabel);
+                        rtbRandomPredictionOutput.SelectionColor = Color.Black;
+                        rtbRandomPredictionOutput.AppendText(leftValue.PadRight(15));
+                        rtbRandomPredictionOutput.SelectionColor = Color.Black;
+                        rtbRandomPredictionOutput.AppendText(rightLabel);
+
+                        if (i >= 4)
+                        {
+                            if (i == 4) rtbRandomPredictionOutput.SelectionColor = input.AvgVerbalAggression < 0.5f ? Color.Green : Color.Red;
+                            else if (i == 5) rtbRandomPredictionOutput.SelectionColor = input.AvgPhysicalAggression < 0.5f ? Color.Green : Color.Red;
+                            else if (i == 6) rtbRandomPredictionOutput.SelectionColor = input.AvgAcademicEngagement >= 3.0f ? Color.Green : Color.Red;
+                            else if (i == 7) rtbRandomPredictionOutput.SelectionColor = input.RedZonePct < 0.25f ? Color.Orange : Color.Red;
+                            else if (i == 8) rtbRandomPredictionOutput.SelectionColor = input.GreenZonePct > 0.5f ? Color.Green : Color.Orange;
+                            else rtbRandomPredictionOutput.SelectionColor = Color.Black;
+
+                            rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Bold);
+                        }
+                        else
+                        {
+                            rtbRandomPredictionOutput.SelectionColor = Color.Black;
+                            rtbRandomPredictionOutput.SelectionFont = new Font("Consolas", 10, FontStyle.Regular);
+                        }
+
+                        rtbRandomPredictionOutput.AppendText(rightValue + "\n");
                     }
                 }
             }
         }
+
 
 
 
@@ -292,115 +335,213 @@ namespace BridgeVueApp
 
 
         // Handle batch prediction button click
-        private void btnBatchPredict_Click(object sender, EventArgs e)
+        private async void btnBatchPredict_Click(object sender, EventArgs e)
         {
-            // Log the button click for debugging
-            Debug.WriteLine($"Button clicked at {DateTime.Now:HH:mm:ss.fff}");
-
-            string connString = "Server=localhost;Database=BridgeVue;Integrated Security=True;TrustServerCertificate=True;";
-            string sql = "SELECT * FROM vStudentMLTrainingData ORDER BY StudentID ASC";
-
-            List<BatchPredictionResult> results = new List<BatchPredictionResult>();
-
-            using (SqlConnection conn = new SqlConnection(connString))
+            try
             {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand(sql, conn);
+                btnBatchPredict.Enabled = false;
+                Cursor = Cursors.WaitCursor;
+
+                // show progress in the grid as we go
+                _batchProgress.Clear();
+                dgvBatchPrediction.DataSource = _batchProgress;
+                dgvBatchPrediction.AutoGenerateColumns = true;
+
+                AppendBatchProgress("Batch", "Starting batch predictions…");
+
+                var prog = new Progress<string>(msg => AppendBatchProgress("Batch", msg));
+                int wrote = await Task.Run(() => BatchPredictor.Run(prog));
+
+                AppendBatchProgress("Batch", $"Scoring finished. {wrote} inference rows written.");
+                AppendBatchProgress("Batch", "Loading latest predictions per student…");
+
+                int modelId = GetCurrentBestModelId();
+                var results = LoadLatestBatchResults(modelId);
+
+                AppendBatchProgress("Batch", $"Loaded {results.Count} latest predictions. Rendering…");
+
+                dgvBatchPrediction.DataSource = new BindingList<BatchPredictionResult>(results);
+                dgvBatchPrediction.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
+                dgvBatchPrediction.Refresh();
+
+                AppendBatchProgress("Batch", "Done.");
+            }
+            catch (Exception ex)
+            {
+                // keep in-grid reporting; no message boxes
+                AppendBatchProgress("Error", ex.Message);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+                btnBatchPredict.Enabled = true;
+            }
+        }
 
 
-                using (var reader = cmd.ExecuteReader())
+        private List<BatchPredictionResult> LoadLatestBatchResults(int modelId)
+        {
+            string sql = $@"
+            WITH Latest AS (
+                SELECT il.*, 
+                        TRY_CONVERT(int, il.EntityKey) AS StudentIDInt,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY il.EntityKey 
+                            ORDER BY il.CreatedAtUtc DESC, il.InferenceID DESC
+                        ) rn
+                FROM {DatabaseConfig.TableInferenceLog} il
+                WHERE il.ModelID = @mid
+            )
+            SELECT 
+                L.StudentIDInt AS StudentID,
+                L.PredictedLabel,
+                L.PredictedScore,
+                L.SuccessProbability,
+                L.TopKJson,
+                sp.GenderNumeric,
+                sp.EthnicityNumeric,
+                sp.Grade,
+                r.RiskScore,
+                r.AvgVerbalAggression,
+                r.AvgPhysicalAggression,
+                r.AvgAcademicEngagement,
+                r.RedZonePct,
+                r.GreenZonePct,
+                r.BehaviorDays
+            FROM Latest L
+            LEFT JOIN {DatabaseConfig.TableStudentProfile} sp ON sp.StudentID = L.StudentIDInt
+            LEFT JOIN {DatabaseConfig.vStudentMLDataRaw} r    ON r.StudentID  = L.StudentIDInt
+            WHERE L.rn = 1
+            ORDER BY L.StudentIDInt ASC;";
+
+            var list = new List<BatchPredictionResult>();
+            using var conn = new SqlConnection(DatabaseConfig.FullConnection);
+            conn.Open();
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@mid", modelId);
+            using var rd = cmd.ExecuteReader();
+
+            int Ord(string n) => rd.GetOrdinal(n);
+            float F(string c) => rd.IsDBNull(Ord(c)) ? 0f : Convert.ToSingle(rd[c]);
+            int I(string c) => rd.IsDBNull(Ord(c)) ? 0 : rd.GetInt32(Ord(c));
+            string S(string c) => rd.IsDBNull(Ord(c)) ? "" : rd.GetString(Ord(c));
+            decimal? DN(string c) => rd.IsDBNull(Ord(c)) ? (decimal?)null : rd.GetDecimal(Ord(c));
+
+            while (rd.Read())
+            {
+                var studentId = I("StudentID");
+                var label = S("PredictedLabel");
+                var top1 = DN("PredictedScore");
+                var succ = DN("SuccessProbability") ?? 0m;
+
+                list.Add(new BatchPredictionResult
                 {
-                    var ords = new OrdinalCache(reader);  // build once
-                    while (reader.Read())
-                    {
-                        // 1) Pull StudentID from DB row
-                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentID"));
+                    StudentID = studentId,
+                    PredictedOutcome = string.IsNullOrWhiteSpace(label) ? "Unknown" : label,
+                    Confidence = (top1.HasValue ? ((float)top1.Value).ToString("P1") : ""),
+                    // If you added these properties to BatchPredictionResult, uncomment:
+                    // SuccessProbability = (float)succ,
+                    // Top3 = FormatTop3(S("TopKJson")),
 
-                        // 2) Predict
-                        var input = ModelInputFactory.FromReader(reader, ords);
-                        var prediction = ML_Class_Success.Predict(input);
-
-                        // 3) Label + score (SAFE)
-                        var (topIdx, confidence) = Top1(prediction.Score ?? Array.Empty<float>());
-                        string predictedExitReason = topIdx >= 0
-                            ? MLLookups.Lookup(MLLookups.ExitReason, topIdx)
-                            : "Unknown";
-
-                        // 4) Log (don’t let logging break UI)
-                        try
-                        {
-                            int modelId = GetCurrentBestModelId();
-                            PredictionLogger.LogPrediction(
-                                modelId,
-                                studentId.ToString(),
-                                predictedExitReason,
-                                confidence
-                            );
-                        }
-                        catch (Exception logEx)
-                        {
-                            Debug.WriteLine($"Inference logging failed: {logEx.Message}");
-                        }
-
-                        // 5) Add to results grid
-                        results.Add(new BatchPredictionResult
-                        {
-                            StudentID = studentId,
-                            PredictedOutcome = predictedExitReason,
-                            Confidence = confidence.ToString("P1"),
-                            Gender = MLLookups.Lookup(MLLookups.Gender, Convert.ToInt32(input.GenderNumeric)),
-                            Ethnicity = MLLookups.Lookup(MLLookups.Ethnicity, Convert.ToInt32(input.EthnicityNumeric)),
-                            Grade = Convert.ToInt32(input.Grade),
-                            RiskScore = input.RiskScore,
-                            AvgVerbalAggression = input.AvgVerbalAggression,
-                            AvgPhysicalAggression = input.AvgPhysicalAggression,
-                            AvgAcademicEngagement = input.AvgAcademicEngagement,
-                            RedZonePct = input.RedZonePct,
-                            GreenZonePct = input.GreenZonePct
-                        });
-
-                    }
-                }
+                    Gender = MLLookups.Lookup(MLLookups.Gender, I("GenderNumeric")),
+                    Ethnicity = MLLookups.Lookup(MLLookups.Ethnicity, I("EthnicityNumeric")),
+                    Grade = I("Grade"),
+                    RiskScore = F("RiskScore"),
+                    AvgVerbalAggression = F("AvgVerbalAggression"),
+                    AvgPhysicalAggression = F("AvgPhysicalAggression"),
+                    AvgAcademicEngagement = F("AvgAcademicEngagement"),
+                    RedZonePct = F("RedZonePct"),
+                    GreenZonePct = F("GreenZonePct")
+                });
             }
 
-            dgvBatchPrediction.DataSource = results;
-            dgvBatchPrediction.Invalidate();
-            dgvBatchPrediction.Refresh();
-
+            return list;
         }
+
+        private static string FormatTop3(string topKJson)
+        {
+            if (string.IsNullOrWhiteSpace(topKJson)) return "";
+            try
+            {
+                var items = JsonSerializer.Deserialize<List<TopKItem>>(topKJson);
+                if (items == null || items.Count == 0) return "";
+                return string.Join("  |  ", items.Select(i => $"{i.Label} {i.Prob:P0}"));
+            }
+            catch { return ""; }
+        }
+
+        private sealed class TopKItem
+        {
+            public string Label { get; set; } = "";
+            public double Prob { get; set; }
+        }
+
+
+
+        // Aend a progress message to the batch progress DataGridView
+        private void AppendBatchProgress(string stage, string message)
+        {
+            _batchProgress.Add(new BatchProgressRow
+            {
+                Time = DateTime.UtcNow,
+                Stage = stage,
+                Message = message
+            });
+
+            try
+            {
+                var last = _batchProgress.Count - 1;
+                if (last >= 0)
+                {
+                    dgvBatchPrediction.FirstDisplayedScrollingRowIndex = last;
+                    dgvBatchPrediction.InvalidateRow(last);
+                }
+            }
+            catch { /* ignore scroll errors */ }
+        }
+
+
 
         // Handle row pre-paint to color rows based on predicted exit reason
         private void DgvBatchPrediction_RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
         {
-            var row = dgvBatchPrediction.Rows[e.RowIndex];
-            string outcome = row.Cells["PredictedOutcome"].Value?.ToString();
+            if (e.RowIndex < 0) return; // header
+            var grid = (DataGridView)sender;
+            var row = grid.Rows[e.RowIndex];
+            if (row.IsNewRow) return;
+
+            // Try the expected column name, then sensible fallbacks
+            string outcome = null;
+            if (grid.Columns.Contains("PredictedOutcome"))
+                outcome = row.Cells["PredictedOutcome"].Value?.ToString();
+            else if (grid.Columns.Contains("PredictedLabel"))
+                outcome = row.Cells["PredictedLabel"].Value?.ToString();
+            else if (grid.Columns.Contains("ExitReason"))
+                outcome = row.Cells["ExitReason"].Value?.ToString();
+
+            if (string.IsNullOrWhiteSpace(outcome)) return;
 
             switch (outcome)
             {
                 case "Returned Successfully":
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(220, 255, 220);  // Soft Green
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(220, 255, 220);
                     row.DefaultCellStyle.ForeColor = Color.DarkGreen;
                     break;
                 case "ACC":
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(220, 240, 255);  // Soft Blue
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(220, 240, 255);
                     row.DefaultCellStyle.ForeColor = Color.DarkBlue;
                     break;
                 case "Transferred":
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);  // Alice Blue
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
                     row.DefaultCellStyle.ForeColor = Color.DarkSlateBlue;
                     break;
                 case "Referred Out":
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 240, 220);  // Soft Orange
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 240, 220);
                     row.DefaultCellStyle.ForeColor = Color.DarkOrange;
                     break;
-                case "Dropped Out":
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 220, 220);  // Soft Red
+                case "ABS":
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 220, 220);
                     row.DefaultCellStyle.ForeColor = Color.DarkRed;
-                    break;
-                case "Unknown":
-                case "Other":
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 220);  // Soft Yellow
-                    row.DefaultCellStyle.ForeColor = Color.DarkGoldenrod;
                     break;
                 default:
                     row.DefaultCellStyle.BackColor = Color.White;
@@ -408,6 +549,7 @@ namespace BridgeVueApp
                     break;
             }
         }
+
 
         // Setup the batch summary text and DataGridView styles
         private void SetupBatchSummary()
@@ -582,13 +724,27 @@ namespace BridgeVueApp
         {
             using var conn = new SqlConnection(DatabaseConfig.FullConnection);
             conn.Open();
-            using var cmd = new SqlCommand(
-                $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} WHERE IsCurrentBest = 1 ORDER BY ModelID DESC;",
-                conn);
-            var obj = cmd.ExecuteScalar();
-            if (obj == null) throw new InvalidOperationException("No current best model found. Train a model first.");
-            return (int)obj;
+
+            // Try current best
+            using (var cmd = new SqlCommand(
+                $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} WHERE IsCurrentBest = 1 ORDER BY TrainingDate DESC;", conn))
+            {
+                var obj = cmd.ExecuteScalar();
+                if (obj != null) return (int)obj;
+            }
+
+            // Fallback to latest by date
+            using (var cmd2 = new SqlCommand(
+                $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} ORDER BY TrainingDate DESC;", conn))
+            {
+                var obj2 = cmd2.ExecuteScalar();
+                if (obj2 != null) return (int)obj2;
+            }
+
+            // Nothing trained yet
+            throw new InvalidOperationException("No models exist yet. Train a model first on the Train tab.");
         }
+
 
     }
 }

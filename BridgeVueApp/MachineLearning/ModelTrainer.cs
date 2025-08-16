@@ -8,13 +8,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Linq;
-
-
 
 namespace BridgeVueApp.MachineLearning
 {
@@ -24,12 +21,11 @@ namespace BridgeVueApp.MachineLearning
         public string? CurrentTrainer { get; init; }
         public double ElapsedSeconds { get; init; }
         public double TotalSeconds { get; init; }
-        public double? ValAccuracy { get; init; }       // last trial's val acc
+        public double? ValAccuracy { get; init; }       // last trial's val micro-accuracy
         public string? BestTrainer { get; init; }
         public double? BestValAccuracy { get; init; }
         public bool Done { get; init; }
     }
-
 
     public sealed class TrainingResult
     {
@@ -37,17 +33,23 @@ namespace BridgeVueApp.MachineLearning
         public string Report { get; init; } = "";
     }
 
+    // Used when enumerating scored predictions (multiclass)
+    public sealed class ExitPrediction
+    {
+        public string PredictedLabel { get; set; } = "";
+        public float[] Score { get; set; } = Array.Empty<float>();
+    }
 
-       
-
-public static class ModelTrainer
+    public static class ModelTrainer
     {
         private static readonly string modelDirectory =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MachineLearning", "MLArtifacts");
-        private const string LabelColumn = "DidSucceed";
+
+        // Multiclass label
+        private const string LabelColumn = "ExitReason";
 
         private static readonly string connectionString = DatabaseConfig.FullConnection;
- 
+
         public static TrainingResult TrainAndLogModel(
             IDataView trainData,
             IDataView testData,
@@ -68,24 +70,24 @@ public static class ModelTrainer
                 TotalSeconds = maxExperimentSeconds
             });
 
-            // AutoML per-trial progress (validation metrics)
-            var trialProgress = new Progress<RunDetail<BinaryClassificationMetrics>>(rd =>
+            // Per-trial progress for MULTICLASS (tracks validation MicroAccuracy)
+            var trialProgress = new Progress<RunDetail<MulticlassClassificationMetrics>>(rd =>
             {
                 if (rd == null) return;
                 var name = rd.TrainerName ?? "Unknown";
-                var acc = rd.ValidationMetrics?.Accuracy;
+                var micro = rd.ValidationMetrics?.MicroAccuracy;
 
-                if (acc.HasValue && (double.IsNaN(bestValAcc) || acc.Value > bestValAcc))
+                if (micro.HasValue && (double.IsNaN(bestValAcc) || micro.Value > bestValAcc))
                 {
-                    bestValAcc = acc.Value;
+                    bestValAcc = micro.Value;
                     bestValTrainer = name;
                 }
 
                 progress?.Report(new TrainingStatus
                 {
-                    Message = $"Trying {name}  |  Val Acc: {(acc.HasValue ? acc.Value.ToString("P2") : "n/a")}",
+                    Message = $"Trying {name}  |  Val MicroAcc: {(micro?.ToString("P2") ?? "n/a")}",
                     CurrentTrainer = name,
-                    ValAccuracy = acc,
+                    ValAccuracy = micro,
                     BestTrainer = bestValTrainer,
                     BestValAccuracy = double.IsNaN(bestValAcc) ? null : bestValAcc,
                     ElapsedSeconds = sw.Elapsed.TotalSeconds,
@@ -93,12 +95,11 @@ public static class ModelTrainer
                 });
             });
 
-            // Run AutoML
+            // Run AutoML (MULTICLASS)
             int secs = maxExperimentSeconds <= 0 ? 60 : maxExperimentSeconds;
             uint expSeconds = (uint)secs;
 
-            var exp = ml.Auto().CreateBinaryClassificationExperiment(
-                maxExperimentTimeInSeconds: expSeconds);
+            var exp = ml.Auto().CreateMulticlassClassificationExperiment(maxExperimentTimeInSeconds: expSeconds);
             var result = exp.Execute(trainData, labelColumnName: LabelColumn, progressHandler: trialProgress);
 
             // Evaluate on TEST
@@ -111,13 +112,12 @@ public static class ModelTrainer
 
             var best = result.BestRun;
             var scoredTest = best.Model.Transform(testData);
-            bool hasProb = scoredTest.Schema.Any(c => c.Name == "Probability");
 
-            BinaryClassificationMetrics tm = hasProb
-                ? ml.BinaryClassification.Evaluate(scoredTest, labelColumnName: LabelColumn,
-                    scoreColumnName: "Score", probabilityColumnName: "Probability", predictedLabelColumnName: "PredictedLabel")
-                : ml.BinaryClassification.EvaluateNonCalibrated(scoredTest, labelColumnName: LabelColumn,
-                    scoreColumnName: "Score", predictedLabelColumnName: "PredictedLabel");
+            var mc = ml.MulticlassClassification.Evaluate(
+                scoredTest,
+                labelColumnName: LabelColumn,
+                scoreColumnName: "Score",
+                predictedLabelColumnName: "PredictedLabel");
 
             // Save artifact (sanitize filename)
             string algo = best.TrainerName ?? "UnknownTrainer";
@@ -153,7 +153,7 @@ public static class ModelTrainer
                     $"UPDATE {DatabaseConfig.TableModelPerformance} SET IsCurrentBest=0 WHERE IsCurrentBest=1", conn, tx))
                     reset.ExecuteNonQuery();
 
-                // insert performance
+                // insert performance (map Micro→Accuracy, Macro→F1; others NULL)
                 using (var cmd = new SqlCommand($@"
 INSERT INTO {DatabaseConfig.TableModelPerformance}
 (TrainingDate, ModelName, ModelType, Hyperparameters, TrainingDurationSec,
@@ -161,20 +161,20 @@ INSERT INTO {DatabaseConfig.TableModelPerformance}
  TrainingDataSize, TestDataSize, IsCurrentBest, ModelFilePath)
 OUTPUT INSERTED.ModelID
 VALUES
-(@td,@name,'ML.NET BinaryClassification (AutoML)',@hyper,@dur,
+(@td,@name,'ML.NET MulticlassClassification (AutoML)',@hyper,@dur,
  @acc,@f1,@auc,@prec,@rec,
  @tr,@te,1,@path);", conn, tx))
                 {
                     cmd.Parameters.AddWithValue("@td", DateTime.UtcNow);
                     cmd.Parameters.AddWithValue("@name", algo);
-                    cmd.Parameters.AddWithValue("@hyper", JsonSerializer.Serialize(new { TrainerName = algo, AutoML = "BinaryClassification", Seed = 0 }));
+                    cmd.Parameters.AddWithValue("@hyper", JsonSerializer.Serialize(new { TrainerName = algo, AutoML = "MulticlassClassification", Seed = 0 }));
                     cmd.Parameters.AddWithValue("@dur", (int)sw.Elapsed.TotalSeconds);
 
-                    cmd.Parameters.AddWithValue("@acc", (decimal)tm.Accuracy);
-                    cmd.Parameters.AddWithValue("@f1", (decimal)tm.F1Score);
-                    cmd.Parameters.AddWithValue("@auc", (decimal)tm.AreaUnderRocCurve);
-                    cmd.Parameters.AddWithValue("@prec", (decimal)tm.PositivePrecision);
-                    cmd.Parameters.AddWithValue("@rec", (decimal)tm.PositiveRecall);
+                    cmd.Parameters.AddWithValue("@acc", (decimal)mc.MicroAccuracy);
+                    cmd.Parameters.AddWithValue("@f1", (decimal)mc.MacroAccuracy);
+                    cmd.Parameters.Add(new SqlParameter("@auc", SqlDbType.Decimal) { Value = DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@prec", SqlDbType.Decimal) { Value = DBNull.Value });
+                    cmd.Parameters.Add(new SqlParameter("@rec", SqlDbType.Decimal) { Value = DBNull.Value });
 
                     cmd.Parameters.AddWithValue("@tr", (int)(trainData.GetRowCount() ?? 0));
                     cmd.Parameters.AddWithValue("@te", (int)(testData.GetRowCount() ?? 0));
@@ -183,18 +183,18 @@ VALUES
                     modelId = (int)cmd.ExecuteScalar();
                 }
 
-                // metrics history
+                // metrics history (same mapping; NULL the binary-only slots)
                 using (var hist = new SqlCommand($@"
 INSERT INTO {DatabaseConfig.TableModelMetricsHistory}
 (ModelID, Accuracy, F1Score, AUC, Precision, Recall)
 VALUES (@m,@a,@f,@u,@p,@r);", conn, tx))
                 {
                     hist.Parameters.AddWithValue("@m", modelId);
-                    hist.Parameters.AddWithValue("@a", (decimal)tm.Accuracy);
-                    hist.Parameters.AddWithValue("@f", (decimal)tm.F1Score);
-                    hist.Parameters.AddWithValue("@u", (decimal)tm.AreaUnderRocCurve);
-                    hist.Parameters.AddWithValue("@p", (decimal)tm.PositivePrecision);
-                    hist.Parameters.AddWithValue("@r", (decimal)tm.PositiveRecall);
+                    hist.Parameters.AddWithValue("@a", (decimal)mc.MicroAccuracy);
+                    hist.Parameters.AddWithValue("@f", (decimal)mc.MacroAccuracy);
+                    hist.Parameters.Add(new SqlParameter("@u", SqlDbType.Decimal) { Value = DBNull.Value });
+                    hist.Parameters.Add(new SqlParameter("@p", SqlDbType.Decimal) { Value = DBNull.Value });
+                    hist.Parameters.Add(new SqlParameter("@r", SqlDbType.Decimal) { Value = DBNull.Value });
                     hist.ExecuteNonQuery();
                 }
 
@@ -204,26 +204,23 @@ VALUES (@m,@a,@f,@u,@p,@r);", conn, tx))
             sw.Stop();
 
             var report =
-    $@"Model Training Summary
+$@"Model Training Summary
 -----------------------
 Model ID:        {modelId}
 Trainer:         {algo}
-Calibrated:      {(hasProb ? "Yes" : "No")}
 Duration:        {sw.Elapsed.TotalSeconds:N0} sec
 Train Rows:      {(int)(trainData.GetRowCount() ?? 0)}
 Test Rows:       {(int)(testData.GetRowCount() ?? 0)}
 Saved To:        {modelPath}
 
-Test Metrics
-  Accuracy:      {tm.Accuracy:P2}
-  F1 Score:      {tm.F1Score:P2}
-  AUC (ROC):     {tm.AreaUnderRocCurve:P3}
-  Precision:     {tm.PositivePrecision:P2}
-  Recall:        {tm.PositiveRecall:P2}";
+Test Metrics (Multiclass)
+  MicroAcc:      {mc.MicroAccuracy:P2}
+  MacroAcc:      {mc.MacroAccuracy:P2}
+  LogLoss:       {mc.LogLoss:N3}";
 
             progress?.Report(new TrainingStatus
             {
-                Message = $"✅ Training complete. Accuracy {tm.Accuracy:P2}, F1 {tm.F1Score:P2}",
+                Message = $"✅ Training complete. MicroAcc {mc.MicroAccuracy:P2}, MacroAcc {mc.MacroAccuracy:P2}",
                 BestTrainer = bestValTrainer,
                 BestValAccuracy = double.IsNaN(bestValAcc) ? null : bestValAcc,
                 ElapsedSeconds = sw.Elapsed.TotalSeconds,
@@ -233,8 +230,6 @@ Test Metrics
 
             return new TrainingResult { ModelId = modelId, Report = report };
         }
-
-
 
         /// <summary>
         /// Resets previous best and inserts this run as current best in one transaction.
@@ -326,7 +321,6 @@ Test Metrics
             var data = new List<ModelInput>();
             const string sql = "SELECT * FROM dbo.vStudentMLTrainingData ORDER BY StudentID ASC";
 
-
             using var conn = new SqlConnection(connectionString);
             conn.Open();
             using var cmd = new SqlCommand(sql, conn);
@@ -381,22 +375,24 @@ Test Metrics
                     BlueZonePct = Has("BlueZonePct") ? F("BlueZonePct") : 0f,
                     GreenZonePct = Has("GreenZonePct") ? F("GreenZonePct") : 0f,
                     BehaviorDays = Has("BehaviorDays") ? I("BehaviorDays") : 0,
-                    DidSucceed = B("DidSucceed")
+
+                    // LABEL for multiclass
+                    ExitReason = reader.IsDBNull(Ord("ExitReason")) ? "" : reader.GetString(Ord("ExitReason"))
+
+                    // IMPORTANT: Do NOT include DidSucceed as a feature when predicting ExitReason
                 });
             }
 
-
             return data;
-
         }
 
         private static int InsertDatasetSnapshot(
             SqlConnection conn, SqlTransaction tx,
             string sourceView, string selectionQuery, int rowCount,
             int? minRecordId = null, int? maxRecordId = null,
-            string featureSchemaHash = null, string dataHash = null, string notes = null)
-                {
-            string sql = @"
+            string? featureSchemaHash = null, string? dataHash = null, string? notes = null)
+        {
+            const string sql = @"
             INSERT INTO dbo.DatasetSnapshot
              (SourceView, SelectionQuery, RowCount, MinRecordID, MaxRecordID, FeatureSchemaHash, DataContentHash, Notes)
             OUTPUT INSERTED.SnapshotID
@@ -417,7 +413,7 @@ Test Metrics
 
         private static void LinkModelToSnapshot(SqlConnection conn, SqlTransaction tx, int modelId, int snapshotId, string role)
         {
-            string sql = @"INSERT INTO dbo.ModelDataUsage (ModelID, SnapshotID, Role) VALUES (@m, @s, @r);";
+            const string sql = @"INSERT INTO dbo.ModelDataUsage (ModelID, SnapshotID, Role) VALUES (@m, @s, @r);";
             using var cmd = new SqlCommand(sql, conn, tx);
             cmd.Parameters.AddWithValue("@m", modelId);
             cmd.Parameters.AddWithValue("@s", snapshotId);
@@ -459,11 +455,10 @@ Test Metrics
             return Convert.ToHexString(bytes); // uppercase hex
         }
 
-
         public static class ModelTracking
         {
             private static readonly string Conn = DatabaseConfig.FullConnection;
-            private const string Label = "DidSucceed";
+            private const string Label = "ExitReason";
             private static readonly string ArtifactDir = Path.Combine("MachineLearning", "MLArtifacts");
 
             public static int BackfillTrainingRunFromCurrentData()
@@ -478,12 +473,13 @@ Test Metrics
                 // Deterministic split so lineage is meaningful
                 var split = ml.Data.TrainTestSplit(data, testFraction: 0.2, seed: 0);
 
-                // AutoML quick experiment (60s like your trainer)
-                var exp = ml.Auto().CreateBinaryClassificationExperiment(maxExperimentTimeInSeconds: 60);
+                // AutoML quick experiment (multiclass)
+                var exp = ml.Auto().CreateMulticlassClassificationExperiment(maxExperimentTimeInSeconds: 60);
                 var result = exp.Execute(split.TrainSet, labelColumnName: Label);
 
                 var best = result.BestRun.Model;
-                var test = ml.BinaryClassification.Evaluate(best.Transform(split.TestSet), labelColumnName: Label, scoreColumnName: "Score");
+                var scored = best.Transform(split.TestSet);
+                var test = ml.MulticlassClassification.Evaluate(scored, labelColumnName: Label, scoreColumnName: "Score");
 
                 // Save artifact
                 var algo = result.BestRun.TrainerName ?? "AutoML";
@@ -513,14 +509,14 @@ Test Metrics
                     using var perfCmd = new SqlCommand(insertPerf, conn, tx);
                     perfCmd.Parameters.AddWithValue("@td", DateTime.UtcNow);
                     perfCmd.Parameters.AddWithValue("@name", algo);
-                    perfCmd.Parameters.AddWithValue("@type", "ML.NET BinaryClassification (AutoML)");
+                    perfCmd.Parameters.AddWithValue("@type", "ML.NET MulticlassClassification (AutoML)");
                     perfCmd.Parameters.AddWithValue("@hyper", JsonSerializer.Serialize(new { TrainerName = algo, Seed = 0 }));
-                    perfCmd.Parameters.AddWithValue("@dur", 60); // we used 60s; replace with a stopwatch if you prefer
-                    perfCmd.Parameters.AddWithValue("@acc", (decimal)test.Accuracy);
-                    perfCmd.Parameters.AddWithValue("@f1", (decimal)test.F1Score);
-                    perfCmd.Parameters.AddWithValue("@auc", (decimal)test.AreaUnderRocCurve);
-                    perfCmd.Parameters.AddWithValue("@prec", (decimal)test.PositivePrecision);
-                    perfCmd.Parameters.AddWithValue("@rec", (decimal)test.PositiveRecall);
+                    perfCmd.Parameters.AddWithValue("@dur", 60);
+                    perfCmd.Parameters.AddWithValue("@acc", (decimal)test.MicroAccuracy);
+                    perfCmd.Parameters.AddWithValue("@f1", (decimal)test.MacroAccuracy);
+                    perfCmd.Parameters.Add(new SqlParameter("@auc", SqlDbType.Decimal) { Value = DBNull.Value });
+                    perfCmd.Parameters.Add(new SqlParameter("@prec", SqlDbType.Decimal) { Value = DBNull.Value });
+                    perfCmd.Parameters.Add(new SqlParameter("@rec", SqlDbType.Decimal) { Value = DBNull.Value });
                     perfCmd.Parameters.AddWithValue("@tr", (int)(split.TrainSet.GetRowCount() ?? 0));
                     perfCmd.Parameters.AddWithValue("@te", (int)(split.TestSet.GetRowCount() ?? 0));
                     perfCmd.Parameters.AddWithValue("@path", modelPath);
@@ -532,11 +528,11 @@ Test Metrics
                         (ModelID, Accuracy, F1Score, AUC, Precision, Recall) VALUES (@m,@a,@f,@u,@p,@r);", conn, tx))
                     {
                         hist.Parameters.AddWithValue("@m", modelId);
-                        hist.Parameters.AddWithValue("@a", (decimal)test.Accuracy);
-                        hist.Parameters.AddWithValue("@f", (decimal)test.F1Score);
-                        hist.Parameters.AddWithValue("@u", (decimal)test.AreaUnderRocCurve);
-                        hist.Parameters.AddWithValue("@p", (decimal)test.PositivePrecision);
-                        hist.Parameters.AddWithValue("@r", (decimal)test.PositiveRecall);
+                        hist.Parameters.AddWithValue("@a", (decimal)test.MicroAccuracy);
+                        hist.Parameters.AddWithValue("@f", (decimal)test.MacroAccuracy);
+                        hist.Parameters.Add(new SqlParameter("@u", SqlDbType.Decimal) { Value = DBNull.Value });
+                        hist.Parameters.Add(new SqlParameter("@p", SqlDbType.Decimal) { Value = DBNull.Value });
+                        hist.Parameters.Add(new SqlParameter("@r", SqlDbType.Decimal) { Value = DBNull.Value });
                         hist.ExecuteNonQuery();
                     }
 
@@ -577,6 +573,4 @@ Test Metrics
             }
         }
     }
-
 }
-

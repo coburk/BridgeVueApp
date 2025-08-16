@@ -8,31 +8,32 @@ namespace BridgeVueApp.Database
 {
     public static class DatabaseConfig
     {
-        // Database name and tables
         public const string DbName = "BridgeVue";
-        public const string TableStudentProfile = "StudentProfile";
-        public const string TableIntakeData = "IntakeData";
-        public const string TableDailyBehavior = "DailyBehavior";
-        public const string TableExitData = "ExitData";
-        public const string TableModelPerformance = "ModelPerformance";
-        public const string TableModelMetricsHistory = "ModelMetricsHistory";
-        public const string TableDatasetSnapshot = "DatasetSnapshot";
-        public const string TableModelDataUsage = "ModelDataUsage";
-        public const string TableInferenceLog = "InferenceLog";
-        public const string vStudentPredictionData = "vStudentPredictionData";
-        public const string vStudentMLDataRaw = "vStudentMLDataRaw";
-        public const string vStudentMLTrainingData = "vStudentMLTrainingData";
-        public const string vStudentMLScoringData = "vStudentMLScoringData";
 
-
-
-        // Connection strings
+        // Connections
         public static string BaseConnection =>
-            "Server=localhost;Integrated Security=true;TrustServerCertificate=True;";
-
+            "Server=localhost;Integrated Security=True;TrustServerCertificate=True;";
         public static string FullConnection =>
-            $"Server=localhost;Database={DbName};Integrated Security=true;TrustServerCertificate=True;Encrypt=False;";
-            //$"Server=localhost;Database={DbName};Trusted_Connection=True;Encrypt=False;";
+            $"Server=localhost;Database={DbName};Integrated Security=True;TrustServerCertificate=True;";
+
+        // Core tables
+        public const string TableStudentProfile = "dbo.StudentProfile";
+        public const string TableIntakeData = "dbo.IntakeData";
+        public const string TableDailyBehavior = "dbo.DailyBehavior";
+        public const string TableExitData = "dbo.ExitData";
+
+        // ML tracking tables
+        public const string TableModelPerformance = "dbo.ModelPerformance";
+        public const string TableModelMetricsHistory = "dbo.ModelMetricsHistory";
+        public const string TableDatasetSnapshot = "dbo.DatasetSnapshot";      // used in ModelTrainer
+        public const string TableModelDataUsage = "dbo.ModelDataUsage";       // used in ModelTrainer.ModelTracking
+        public const string TableInferenceLog = "dbo.InferenceLog";         // batch scoring writes here
+
+        // Views
+        public const string vStudentMLDataRaw = "dbo.vStudentMLDataRaw";
+        public const string vStudentPredictionData = "dbo.vStudentPredictionData";
+        public const string vStudentMLTrainingData = "dbo.vStudentMLTrainingData"; 
     }
+
 }
 

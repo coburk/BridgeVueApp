@@ -10,6 +10,9 @@ namespace BridgeVueApp.DataGeneration
 {
     public static class SyntheticDataGenerator
     {
+
+
+
         // Generates a list of student profiles with random data
         public static List<StudentProfile> GenerateStudentProfiles(int count, IProgress<string> progress)
         {
@@ -164,7 +167,7 @@ namespace BridgeVueApp.DataGeneration
         // Generates weekly emotion data based on daily behaviors
         public static List<DailyBehavior> GenerateWeeklyEmotionData(List<DailyBehavior> behaviorList, IProgress<string> progress = null)
         {
-            progress?.Report("📅 Generating weekly emotion check-ins...");
+            progress?.Report("Generating weekly emotion check-ins...");
 
             var rand = new Random();
             var groupedByStudent = behaviorList.GroupBy(b => b.StudentLocalKey); // FIX
@@ -196,7 +199,7 @@ namespace BridgeVueApp.DataGeneration
                 }
             }
 
-            progress?.Report("✅ Weekly emotion check-ins generated.");
+            progress?.Report("Weekly emotion check-ins generated.");
             return behaviorList;
         }
 
