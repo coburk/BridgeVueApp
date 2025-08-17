@@ -179,38 +179,31 @@ CREATE TABLE {DatabaseConfig.TableExitData} (
     CONSTRAINT FK_Exit_ReasonLkp FOREIGN KEY (ExitReason) REFERENCES dbo.ExitReasonLkp(ExitReason)
 );
 
--- 1) Every training run
+-- Every training run (one row per run/model artifact)
 CREATE TABLE {DatabaseConfig.TableModelPerformance} (
     ModelID             INT IDENTITY(1,1) PRIMARY KEY,
     TrainingDate        DATETIME2(3) NOT NULL CONSTRAINT DF_ModelPerf_TrainingDate DEFAULT SYSUTCDATETIME(),
     ModelName           NVARCHAR(100) NOT NULL,
     ModelType           NVARCHAR(100) NOT NULL,         -- e.g., 'ML.NET MulticlassClassification'
-    Hyperparameters     NVARCHAR(MAX) NULL,             -- JSON string
+    Hyperparameters     NVARCHAR(MAX) NULL,
     TrainingDurationSec INT NULL,
-    Accuracy            DECIMAL(5,4) NULL CHECK (Accuracy BETWEEN 0 AND 1),
-    F1Score             DECIMAL(5,4) NULL CHECK (F1Score BETWEEN 0 AND 1),
-    AUC                 DECIMAL(5,4) NULL CHECK (AUC BETWEEN 0 AND 1),
-    [Precision]         DECIMAL(5,4) NULL CHECK ([Precision] BETWEEN 0 AND 1),
-    Recall              DECIMAL(5,4) NULL CHECK (Recall BETWEEN 0 AND 1),
+    Accuracy            DECIMAL(5,4) NULL CHECK (Accuracy BETWEEN 0 AND 1),   -- MicroAccuracy
+    F1Score             DECIMAL(5,4) NULL CHECK (F1Score BETWEEN 0 AND 1),    -- MacroAccuracy
     TrainingDataSize    INT NULL CHECK (TrainingDataSize >= 0),
     TestDataSize        INT NULL CHECK (TestDataSize >= 0),
     IsCurrentBest       BIT NOT NULL CONSTRAINT DF_ModelPerf_IsCurrentBest DEFAULT 0,
     ModelFilePath       NVARCHAR(500) NULL
 );
 
--- 2) Time series metrics
+-- Time series metrics for drift/tracking (append-only)
 CREATE TABLE {DatabaseConfig.TableModelMetricsHistory} (
     MetricID    INT IDENTITY(1,1) PRIMARY KEY,
     ModelID     INT NOT NULL,
-    Accuracy    DECIMAL(5,4) NULL CHECK (Accuracy BETWEEN 0 AND 1),
-    F1Score     DECIMAL(5,4) NULL CHECK (F1Score BETWEEN 0 AND 1),
-    AUC         DECIMAL(5,4) NULL CHECK (AUC BETWEEN 0 AND 1),
-    [Precision] DECIMAL(5,4) NULL CHECK ([Precision] BETWEEN 0 AND 1),
-    Recall      DECIMAL(5,4) NULL CHECK (Recall BETWEEN 0 AND 1),
+    Accuracy    DECIMAL(5,4) NULL CHECK (Accuracy BETWEEN 0 AND 1),   -- MicroAccuracy
+    F1Score     DECIMAL(5,4) NULL CHECK (F1Score BETWEEN 0 AND 1),    -- MacroAccuracy
     [Timestamp] DATETIME2(3) NOT NULL CONSTRAINT DF_ModelMetricsHistory_Timestamp DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_ModelPerf_MetricsHist
-        FOREIGN KEY (ModelID)
-        REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID)
+        FOREIGN KEY (ModelID) REFERENCES {DatabaseConfig.TableModelPerformance}(ModelID)
         ON DELETE CASCADE
 );
 

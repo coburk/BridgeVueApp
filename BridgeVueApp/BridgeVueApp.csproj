@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.ML" Version="4.0.2" />
     <PackageReference Include="Microsoft.ML.AutoML" Version="0.22.2" />
     <PackageReference Include="Microsoft.ML.LightGbm" Version="4.0.2" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
+    <PackageReference Include="ScottPlot.WinForms" Version="5.0.55" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

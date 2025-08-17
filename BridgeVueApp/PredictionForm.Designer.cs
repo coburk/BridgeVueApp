@@ -76,6 +76,12 @@
             lblTrainStatus = new Label();
             pbTrain = new ProgressBar();
             btnTrain = new Button();
+            tabModel = new TabPage();
+            btnModelRefresh = new Button();
+            dgvModelSummary = new DataGridView();
+            tabHistory = new TabPage();
+            dgvModelHistory = new DataGridView();
+            sqlCommand1 = new Microsoft.Data.SqlClient.SqlCommand();
             tabControl1.SuspendLayout();
             tabRandom.SuspendLayout();
             tabManual.SuspendLayout();
@@ -95,6 +101,10 @@
             ((System.ComponentModel.ISupportInitialize)dgvBatchPrediction).BeginInit();
             gbxBatchSummary.SuspendLayout();
             tabTrain.SuspendLayout();
+            tabModel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvModelSummary).BeginInit();
+            tabHistory.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvModelHistory).BeginInit();
             SuspendLayout();
             // 
             // btnRandomStudentPredict
@@ -113,6 +123,8 @@
             tabControl1.Controls.Add(tabManual);
             tabControl1.Controls.Add(tabBatch);
             tabControl1.Controls.Add(tabTrain);
+            tabControl1.Controls.Add(tabModel);
+            tabControl1.Controls.Add(tabHistory);
             tabControl1.Location = new Point(12, 12);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
@@ -516,7 +528,7 @@
             tabBatch.TabIndex = 2;
             tabBatch.Text = "Batch Prediction";
             tabBatch.UseVisualStyleBackColor = true;
-            tabBatch.Click += tabBatch_Click;
+            //tabBatch.Click += tabBatch_Click;
             // 
             // dgvBatchPrediction
             // 
@@ -578,17 +590,18 @@
             // rtbTrainSummary
             // 
             rtbTrainSummary.Font = new Font("Consolas", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            rtbTrainSummary.Location = new Point(42, 67);
+            rtbTrainSummary.Location = new Point(42, 75);
             rtbTrainSummary.Name = "rtbTrainSummary";
             rtbTrainSummary.ReadOnly = true;
-            rtbTrainSummary.Size = new Size(614, 373);
+            rtbTrainSummary.Size = new Size(614, 367);
             rtbTrainSummary.TabIndex = 3;
             rtbTrainSummary.Text = "";
+            rtbTrainSummary.TextChanged += rtbTrainSummary_TextChanged;
             // 
             // lblTrainStatus
             // 
             lblTrainStatus.AutoSize = true;
-            lblTrainStatus.Location = new Point(176, 49);
+            lblTrainStatus.Location = new Point(42, 50);
             lblTrainStatus.Name = "lblTrainStatus";
             lblTrainStatus.Size = new Size(84, 15);
             lblTrainStatus.TabIndex = 2;
@@ -614,6 +627,66 @@
             btnTrain.Text = "Train Model";
             btnTrain.UseVisualStyleBackColor = true;
             btnTrain.Click += btnTrain_Click;
+            // 
+            // tabModel
+            // 
+            tabModel.Controls.Add(btnModelRefresh);
+            tabModel.Controls.Add(dgvModelSummary);
+            tabModel.Location = new Point(4, 24);
+            tabModel.Name = "tabModel";
+            tabModel.Size = new Size(703, 475);
+            tabModel.TabIndex = 4;
+            tabModel.Text = "Model Summary";
+            tabModel.UseVisualStyleBackColor = true;
+            // 
+            // btnModelRefresh
+            // 
+            btnModelRefresh.Location = new Point(249, 6);
+            btnModelRefresh.Name = "btnModelRefresh";
+            btnModelRefresh.Size = new Size(153, 23);
+            btnModelRefresh.TabIndex = 1;
+            btnModelRefresh.Text = "Refresh Model Summary";
+            btnModelRefresh.UseVisualStyleBackColor = true;
+            btnModelRefresh.Click += btnModelRefresh_Click;
+            // 
+            // dgvModelSummary
+            // 
+            dgvModelSummary.AllowUserToAddRows = false;
+            dgvModelSummary.AllowUserToDeleteRows = false;
+            dgvModelSummary.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvModelSummary.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dgvModelSummary.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvModelSummary.Location = new Point(18, 35);
+            dgvModelSummary.MultiSelect = false;
+            dgvModelSummary.Name = "dgvModelSummary";
+            dgvModelSummary.ReadOnly = true;
+            dgvModelSummary.RowHeadersVisible = false;
+            dgvModelSummary.SelectionMode = DataGridViewSelectionMode.FullColumnSelect;
+            dgvModelSummary.Size = new Size(665, 421);
+            dgvModelSummary.TabIndex = 0;
+            // 
+            // tabHistory
+            // 
+            tabHistory.Controls.Add(dgvModelHistory);
+            tabHistory.Location = new Point(4, 24);
+            tabHistory.Name = "tabHistory";
+            tabHistory.Size = new Size(703, 475);
+            tabHistory.TabIndex = 5;
+            tabHistory.Text = "Model History";
+            tabHistory.UseVisualStyleBackColor = true;
+            // 
+            // dgvModelHistory
+            // 
+            dgvModelHistory.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvModelHistory.Location = new Point(21, 260);
+            dgvModelHistory.Name = "dgvModelHistory";
+            dgvModelHistory.Size = new Size(663, 194);
+            dgvModelHistory.TabIndex = 0;
+            // 
+            // sqlCommand1
+            // 
+            sqlCommand1.CommandTimeout = 30;
+            sqlCommand1.EnableOptimizedParameterBinding = false;
             // 
             // PredictionForm
             // 
@@ -650,6 +723,10 @@
             gbxBatchSummary.PerformLayout();
             tabTrain.ResumeLayout(false);
             tabTrain.PerformLayout();
+            tabModel.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)dgvModelSummary).EndInit();
+            tabHistory.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)dgvModelHistory).EndInit();
             ResumeLayout(false);
         }
 
@@ -701,5 +778,11 @@
         private Label lblTrainStatus;
         private ProgressBar pbTrain;
         private RichTextBox rtbTrainSummary;
+        private TabPage tabModel;
+        private DataGridView dgvModelSummary;
+        private Button btnModelRefresh;
+        private TabPage tabHistory;
+        private DataGridView dgvModelHistory;
+        private Microsoft.Data.SqlClient.SqlCommand sqlCommand1;
     }
 }

@@ -79,14 +79,24 @@ namespace BridgeVueApp.MachineLearning
         private static readonly string ConnStr = DatabaseConfig.FullConnection;
         private static readonly string[] SuccessLabels = new[] { "Returned Successfully", "ACC" };
 
-        public static int Run(IProgress<string>? progress = null, int? overrideModelId = null, float successThreshold = 0.50f)
+        public static int Run(
+            IProgress<string>? progress = null,
+            int? overrideModelId = null,
+            float successThreshold = 0.50f,
+            bool throwIfMissing = true)   // <— new
         {
             var ml = new MLContext(seed: 0);
 
             progress?.Report("Loading current best model…");
             var (modelId, modelPath) = GetModelToUse(overrideModelId);
             if (modelId == 0 || string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath))
-                throw new InvalidOperationException("No model available. Train a model first.");
+            {
+                if (throwIfMissing)
+                    throw new InvalidOperationException("No model available. Train a model first.");
+
+                progress?.Report("No trained model found or model file is missing. Skipping batch.");
+                return 0;
+            }
 
             ITransformer model;
             DataViewSchema modelSchema;
@@ -465,6 +475,21 @@ VALUES
             var topK = labeled.Take(3).Select(x => (x.Label, x.Prob)).ToList();
             return (top.Label, top.Prob, topK);
         }
+
+
+
+        public static LoadedModel? TryLoadCurrentBest(IProgress<string>? progress = null, int? overrideModelId = null)
+        {
+            try { return LoadCurrentBest(progress, overrideModelId); }
+            catch { return null; }
+        }
+
+        public static bool TryGetCurrentModel(out int modelId, out string modelPath)
+        {
+            (modelId, modelPath) = GetModelToUse(null);
+            return modelId != 0 && !string.IsNullOrWhiteSpace(modelPath) && File.Exists(modelPath);
+        }
+
 
 
     }

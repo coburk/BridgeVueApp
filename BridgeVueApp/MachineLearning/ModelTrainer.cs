@@ -5,6 +5,7 @@ using Microsoft.ML.AutoML;
 using Microsoft.ML.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
@@ -12,6 +13,9 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+
+
+
 
 namespace BridgeVueApp.MachineLearning
 {
@@ -33,13 +37,15 @@ namespace BridgeVueApp.MachineLearning
         public string Report { get; init; } = "";
     }
 
-    // Used when enumerating scored predictions (multiclass)
+    // Matches ML.NET multiclass scorer output when enumerating
     public sealed class ExitPrediction
     {
         public string PredictedLabel { get; set; } = "";
         public float[] Score { get; set; } = Array.Empty<float>();
     }
 
+
+    // This class is responsible for training and logging the model
     public static class ModelTrainer
     {
         private static readonly string modelDirectory =
@@ -50,6 +56,9 @@ namespace BridgeVueApp.MachineLearning
 
         private static readonly string connectionString = DatabaseConfig.FullConnection;
 
+
+
+        // This method trains the model and logs the result
         public static TrainingResult TrainAndLogModel(
             IDataView trainData,
             IDataView testData,
@@ -134,10 +143,10 @@ namespace BridgeVueApp.MachineLearning
 
             ml.Model.Save(best.Model, trainData.Schema, modelPath);
 
-            // Log to DB
+            // ---- Log to DB + snapshots in one transaction ----
             progress?.Report(new TrainingStatus
             {
-                Message = "Logging metrics to database…",
+                Message = "Logging metrics & snapshots to database…",
                 ElapsedSeconds = sw.Elapsed.TotalSeconds,
                 TotalSeconds = maxExperimentSeconds
             });
@@ -155,15 +164,15 @@ namespace BridgeVueApp.MachineLearning
 
                 // insert performance (map Micro→Accuracy, Macro→F1; others NULL)
                 using (var cmd = new SqlCommand($@"
-INSERT INTO {DatabaseConfig.TableModelPerformance}
-(TrainingDate, ModelName, ModelType, Hyperparameters, TrainingDurationSec,
- Accuracy, F1Score, AUC, Precision, Recall,
- TrainingDataSize, TestDataSize, IsCurrentBest, ModelFilePath)
-OUTPUT INSERTED.ModelID
-VALUES
-(@td,@name,'ML.NET MulticlassClassification (AutoML)',@hyper,@dur,
- @acc,@f1,@auc,@prec,@rec,
- @tr,@te,1,@path);", conn, tx))
+                    INSERT INTO {DatabaseConfig.TableModelPerformance}
+                    (TrainingDate, ModelName, ModelType, Hyperparameters, TrainingDurationSec,
+                     Accuracy, F1Score,
+                     TrainingDataSize, TestDataSize, IsCurrentBest, ModelFilePath)
+                    OUTPUT INSERTED.ModelID
+                    VALUES
+                    (@td,@name,'ML.NET MulticlassClassification (AutoML)',@hyper,@dur,
+                     @acc,@f1,
+                     @tr,@te,1,@path);", conn, tx))
                 {
                     cmd.Parameters.AddWithValue("@td", DateTime.UtcNow);
                     cmd.Parameters.AddWithValue("@name", algo);
@@ -172,9 +181,6 @@ VALUES
 
                     cmd.Parameters.AddWithValue("@acc", (decimal)mc.MicroAccuracy);
                     cmd.Parameters.AddWithValue("@f1", (decimal)mc.MacroAccuracy);
-                    cmd.Parameters.Add(new SqlParameter("@auc", SqlDbType.Decimal) { Value = DBNull.Value });
-                    cmd.Parameters.Add(new SqlParameter("@prec", SqlDbType.Decimal) { Value = DBNull.Value });
-                    cmd.Parameters.Add(new SqlParameter("@rec", SqlDbType.Decimal) { Value = DBNull.Value });
 
                     cmd.Parameters.AddWithValue("@tr", (int)(trainData.GetRowCount() ?? 0));
                     cmd.Parameters.AddWithValue("@te", (int)(testData.GetRowCount() ?? 0));
@@ -183,20 +189,50 @@ VALUES
                     modelId = (int)cmd.ExecuteScalar();
                 }
 
-                // metrics history (same mapping; NULL the binary-only slots)
+                // metrics history (just Accuracy & F1)
                 using (var hist = new SqlCommand($@"
-INSERT INTO {DatabaseConfig.TableModelMetricsHistory}
-(ModelID, Accuracy, F1Score, AUC, Precision, Recall)
-VALUES (@m,@a,@f,@u,@p,@r);", conn, tx))
+                    INSERT INTO {DatabaseConfig.TableModelMetricsHistory}
+                    (ModelID, Accuracy, F1Score)
+                    VALUES (@m,@a,@f);", conn, tx))
                 {
                     hist.Parameters.AddWithValue("@m", modelId);
                     hist.Parameters.AddWithValue("@a", (decimal)mc.MicroAccuracy);
                     hist.Parameters.AddWithValue("@f", (decimal)mc.MacroAccuracy);
-                    hist.Parameters.Add(new SqlParameter("@u", SqlDbType.Decimal) { Value = DBNull.Value });
-                    hist.Parameters.Add(new SqlParameter("@p", SqlDbType.Decimal) { Value = DBNull.Value });
-                    hist.Parameters.Add(new SqlParameter("@r", SqlDbType.Decimal) { Value = DBNull.Value });
                     hist.ExecuteNonQuery();
                 }
+
+                // --- SNAPSHOTS + USAGE LINKING ---
+                int trainRows = (int)(trainData.GetRowCount() ?? 0);
+                int testRows = (int)(testData.GetRowCount() ?? 0);
+
+                string trainSchemaHash = ComputeSchemaHash(trainData.Schema, LabelColumn);
+                string testSchemaHash = ComputeSchemaHash(testData.Schema, LabelColumn);
+
+                string trainFingerprint = ComputeDataFingerprint(ml, trainData, LabelColumn);
+                string testFingerprint = ComputeDataFingerprint(ml, testData, LabelColumn);
+
+                int trainSnapId = InsertDatasetSnapshot(
+                    conn, tx,
+                    sourceView: "dbo.vStudentMLTrainingData",
+                    selectionQuery: "(Stratified split TRAIN 80% by ExitReason, seed=0)",
+                    rowCount: trainRows,
+                    minRecordId: null, maxRecordId: null,
+                    featureSchemaHash: trainSchemaHash,
+                    dataHash: trainFingerprint,
+                    notes: "AutoML Multiclass training set");
+
+                int testSnapId = InsertDatasetSnapshot(
+                    conn, tx,
+                    sourceView: "dbo.vStudentMLTrainingData",
+                    selectionQuery: "(Stratified split TEST 20% by ExitReason, seed=0)",
+                    rowCount: testRows,
+                    minRecordId: null, maxRecordId: null,
+                    featureSchemaHash: testSchemaHash,
+                    dataHash: testFingerprint,
+                    notes: "AutoML Multiclass test set");
+
+                LinkModelToSnapshot(conn, tx, modelId, trainSnapId, role: "TRAIN");
+                LinkModelToSnapshot(conn, tx, modelId, testSnapId, role: "TEST");
 
                 tx.Commit();
             }
@@ -204,19 +240,19 @@ VALUES (@m,@a,@f,@u,@p,@r);", conn, tx))
             sw.Stop();
 
             var report =
-$@"Model Training Summary
------------------------
-Model ID:        {modelId}
-Trainer:         {algo}
-Duration:        {sw.Elapsed.TotalSeconds:N0} sec
-Train Rows:      {(int)(trainData.GetRowCount() ?? 0)}
-Test Rows:       {(int)(testData.GetRowCount() ?? 0)}
-Saved To:        {modelPath}
-
-Test Metrics (Multiclass)
-  MicroAcc:      {mc.MicroAccuracy:P2}
-  MacroAcc:      {mc.MacroAccuracy:P2}
-  LogLoss:       {mc.LogLoss:N3}";
+            $@"Model Training Summary
+            -----------------------
+            Model ID:        {modelId}
+            Trainer:         {algo}
+            Duration:        {sw.Elapsed.TotalSeconds:N0} sec
+            Train Rows:      {(int)(trainData.GetRowCount() ?? 0)}
+            Test Rows:       {(int)(testData.GetRowCount() ?? 0)}
+            Saved To:        {modelPath}
+            
+            Test Metrics (Multiclass)
+              MicroAcc:      {mc.MicroAccuracy:P2}
+              MacroAcc:      {mc.MacroAccuracy:P2}
+              LogLoss:       {mc.LogLoss:N3}";
 
             progress?.Report(new TrainingStatus
             {
@@ -243,7 +279,6 @@ Test Metrics (Multiclass)
 
             try
             {
-                // 1) Clear current best
                 using (var reset = new SqlCommand(
                     $"UPDATE {DatabaseConfig.TableModelPerformance} SET IsCurrentBest = 0 WHERE IsCurrentBest = 1",
                     conn, tx))
@@ -251,13 +286,11 @@ Test Metrics (Multiclass)
                     reset.ExecuteNonQuery();
                 }
 
-                // 2) Insert this run
                 string insertSql = $@"
                 INSERT INTO {DatabaseConfig.TableModelPerformance}
                 (
                     TrainingDate, ModelName, ModelType, Hyperparameters, TrainingDurationSec,
-                    Accuracy, F1Score, AUC, Precision, Recall,
-                    TrainingDataSize, TestDataSize, IsCurrentBest, ModelFilePath
+                    Accuracy, F1Score, TrainingDataSize, TestDataSize, IsCurrentBest, ModelFilePath
                 )
                 OUTPUT INSERTED.ModelID
                 VALUES
@@ -288,7 +321,6 @@ Test Metrics (Multiclass)
                     modelId = (int)cmd.ExecuteScalar();
                 }
 
-                // 3) Optional: append a metrics-history row
                 string histSql = $@"
                 INSERT INTO {DatabaseConfig.TableModelMetricsHistory}
                     (ModelID, Accuracy, F1Score, AUC, Precision, Recall)
@@ -316,6 +348,10 @@ Test Metrics (Multiclass)
             }
         }
 
+
+
+
+        // Load training data from the database
         public static List<ModelInput> LoadTrainingDataFromDatabase()
         {
             var data = new List<ModelInput>();
@@ -386,6 +422,9 @@ Test Metrics (Multiclass)
             return data;
         }
 
+
+
+        // Load dataset snapshot into the database
         private static int InsertDatasetSnapshot(
             SqlConnection conn, SqlTransaction tx,
             string sourceView, string selectionQuery, int rowCount,
@@ -394,7 +433,7 @@ Test Metrics (Multiclass)
         {
             const string sql = @"
             INSERT INTO dbo.DatasetSnapshot
-             (SourceView, SelectionQuery, RowCount, MinRecordID, MaxRecordID, FeatureSchemaHash, DataContentHash, Notes)
+             (SourceView, SelectionQuery, [RowCount], MinRecordID, MaxRecordID, FeatureSchemaHash, DataContentHash, Notes)
             OUTPUT INSERTED.SnapshotID
             VALUES
              (@src, @sel, @cnt, @min, @max, @fhash, @dhash, @notes);";
@@ -411,6 +450,9 @@ Test Metrics (Multiclass)
             return (int)cmd.ExecuteScalar();
         }
 
+
+
+        // 
         private static void LinkModelToSnapshot(SqlConnection conn, SqlTransaction tx, int modelId, int snapshotId, string role)
         {
             const string sql = @"INSERT INTO dbo.ModelDataUsage (ModelID, SnapshotID, Role) VALUES (@m, @s, @r);";
@@ -422,22 +464,21 @@ Test Metrics (Multiclass)
         }
 
         private static void InsertMetricsHistory(SqlConnection conn, SqlTransaction tx, int modelId,
-            decimal accuracy, decimal f1, decimal auc, decimal precision, decimal recall)
+            decimal accuracy, decimal f1)
         {
             string sql = $@"
             INSERT INTO {DatabaseConfig.TableModelMetricsHistory}
-             (ModelID, Accuracy, F1Score, AUC, Precision, Recall)
-            VALUES (@mid, @acc, @f1, @auc, @prec, @rec);";
+             (ModelID, Accuracy, F1Score)
+            VALUES (@mid, @acc, @f1);";
 
             using var cmd = new SqlCommand(sql, conn, tx);
             cmd.Parameters.AddWithValue("@mid", modelId);
             cmd.Parameters.AddWithValue("@acc", (object?)accuracy ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@f1", (object?)f1 ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@auc", (object?)auc ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@prec", (object?)precision ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@rec", (object?)recall ?? DBNull.Value);
             cmd.ExecuteNonQuery();
         }
+
+
 
         // Hash of ordered (Name|Type|Role) to catch schema/feature order drift
         private static string ComputeSchemaHash(DataViewSchema schema, string labelColumn)
@@ -455,6 +496,21 @@ Test Metrics (Multiclass)
             return Convert.ToHexString(bytes); // uppercase hex
         }
 
+        // Tiny fingerprint so snapshots change when data/schema change.
+        // For now: SchemaHash + RowCount + LabelColumn name.
+        private static string ComputeDataFingerprint(MLContext ml, IDataView data, string labelColumn)
+        {
+            string schemaHash = ComputeSchemaHash(data.Schema, labelColumn);
+            long rowCount = data.GetRowCount() ?? 0;
+            string payload = $"{schemaHash}|rows:{rowCount}|label:{labelColumn}";
+            using var sha = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(payload);
+            return Convert.ToHexString(sha.ComputeHash(bytes));
+        }
+
+
+
+        // This class is responsible for tracking model performance and metrics
         public static class ModelTracking
         {
             private static readonly string Conn = DatabaseConfig.FullConnection;
@@ -477,17 +533,16 @@ Test Metrics (Multiclass)
                 var exp = ml.Auto().CreateMulticlassClassificationExperiment(maxExperimentTimeInSeconds: 60);
                 var result = exp.Execute(split.TrainSet, labelColumnName: Label);
 
-                var best = result.BestRun.Model;
-                var scored = best.Transform(split.TestSet);
+                var bestModel = result.BestRun.Model;
+                var scored = bestModel.Transform(split.TestSet);
                 var test = ml.MulticlassClassification.Evaluate(scored, labelColumnName: Label, scoreColumnName: "Score");
 
                 // Save artifact
                 var algo = result.BestRun.TrainerName ?? "AutoML";
                 var stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
                 var modelPath = Path.Combine(ArtifactDir, $"Model_{algo}_{stamp}.zip");
-                ml.Model.Save(best, split.TrainSet.Schema, modelPath);
+                ml.Model.Save(bestModel, split.TrainSet.Schema, modelPath);
 
-                // Insert everything in one transaction
                 using var conn = new SqlConnection(Conn);
                 conn.Open();
                 using var tx = conn.BeginTransaction();
@@ -506,23 +561,26 @@ Test Metrics (Multiclass)
                     OUTPUT INSERTED.ModelID
                     VALUES (@td,@name,@type,@hyper,@dur,@acc,@f1,@auc,@prec,@rec,@tr,@te,1,@path);";
 
-                    using var perfCmd = new SqlCommand(insertPerf, conn, tx);
-                    perfCmd.Parameters.AddWithValue("@td", DateTime.UtcNow);
-                    perfCmd.Parameters.AddWithValue("@name", algo);
-                    perfCmd.Parameters.AddWithValue("@type", "ML.NET MulticlassClassification (AutoML)");
-                    perfCmd.Parameters.AddWithValue("@hyper", JsonSerializer.Serialize(new { TrainerName = algo, Seed = 0 }));
-                    perfCmd.Parameters.AddWithValue("@dur", 60);
-                    perfCmd.Parameters.AddWithValue("@acc", (decimal)test.MicroAccuracy);
-                    perfCmd.Parameters.AddWithValue("@f1", (decimal)test.MacroAccuracy);
-                    perfCmd.Parameters.Add(new SqlParameter("@auc", SqlDbType.Decimal) { Value = DBNull.Value });
-                    perfCmd.Parameters.Add(new SqlParameter("@prec", SqlDbType.Decimal) { Value = DBNull.Value });
-                    perfCmd.Parameters.Add(new SqlParameter("@rec", SqlDbType.Decimal) { Value = DBNull.Value });
-                    perfCmd.Parameters.AddWithValue("@tr", (int)(split.TrainSet.GetRowCount() ?? 0));
-                    perfCmd.Parameters.AddWithValue("@te", (int)(split.TestSet.GetRowCount() ?? 0));
-                    perfCmd.Parameters.AddWithValue("@path", modelPath);
-                    int modelId = (int)perfCmd.ExecuteScalar();
+                    int modelId;
+                    using (var perfCmd = new SqlCommand(insertPerf, conn, tx))
+                    {
+                        perfCmd.Parameters.AddWithValue("@td", DateTime.UtcNow);
+                        perfCmd.Parameters.AddWithValue("@name", algo);
+                        perfCmd.Parameters.AddWithValue("@type", "ML.NET MulticlassClassification (AutoML)");
+                        perfCmd.Parameters.AddWithValue("@hyper", JsonSerializer.Serialize(new { TrainerName = algo, Seed = 0 }));
+                        perfCmd.Parameters.AddWithValue("@dur", 60);
+                        perfCmd.Parameters.AddWithValue("@acc", (decimal)test.MicroAccuracy);
+                        perfCmd.Parameters.AddWithValue("@f1", (decimal)test.MacroAccuracy);
+                        perfCmd.Parameters.Add(new SqlParameter("@auc", SqlDbType.Decimal) { Value = DBNull.Value });
+                        perfCmd.Parameters.Add(new SqlParameter("@prec", SqlDbType.Decimal) { Value = DBNull.Value });
+                        perfCmd.Parameters.Add(new SqlParameter("@rec", SqlDbType.Decimal) { Value = DBNull.Value });
+                        perfCmd.Parameters.AddWithValue("@tr", (int)(split.TrainSet.GetRowCount() ?? 0));
+                        perfCmd.Parameters.AddWithValue("@te", (int)(split.TestSet.GetRowCount() ?? 0));
+                        perfCmd.Parameters.AddWithValue("@path", modelPath);
+                        modelId = (int)perfCmd.ExecuteScalar();
+                    }
 
-                    // Metrics history (append one point from the test eval)
+                    // Metrics history
                     using (var hist = new SqlCommand($@"
                         INSERT INTO {DatabaseConfig.TableModelMetricsHistory}
                         (ModelID, Accuracy, F1Score, AUC, Precision, Recall) VALUES (@m,@a,@f,@u,@p,@r);", conn, tx))
@@ -536,18 +594,36 @@ Test Metrics (Multiclass)
                         hist.ExecuteNonQuery();
                     }
 
-                    // Dataset snapshots (simple descriptors; enhance later with hashes)
-                    int trainSnap = InsertSnapshot(conn, tx, "dbo.vStudentMLTrainingData", "(AutoML split TRAIN 80%)", (int)(split.TrainSet.GetRowCount() ?? 0));
-                    int testSnap = InsertSnapshot(conn, tx, "dbo.vStudentMLTrainingData", "(AutoML split TEST 20%)", (int)(split.TestSet.GetRowCount() ?? 0));
+                    // Snapshots + usage
+                    int trRows = (int)(split.TrainSet.GetRowCount() ?? 0);
+                    int teRows = (int)(split.TestSet.GetRowCount() ?? 0);
 
-                    // Link usage
-                    using (var link = new SqlCommand($@"INSERT INTO {DatabaseConfig.TableModelDataUsage}(ModelID,SnapshotID,Role) VALUES (@m,@s,'TRAIN'),(@m,@t,'TEST');", conn, tx))
-                    {
-                        link.Parameters.AddWithValue("@m", modelId);
-                        link.Parameters.AddWithValue("@s", trainSnap);
-                        link.Parameters.AddWithValue("@t", testSnap);
-                        link.ExecuteNonQuery();
-                    }
+                    string trSchemaHash = ComputeSchemaHash(split.TrainSet.Schema, Label);
+                    string teSchemaHash = ComputeSchemaHash(split.TestSet.Schema, Label);
+
+                    string trFingerprint = ComputeDataFingerprint(ml, split.TrainSet, Label);
+                    string teFingerprint = ComputeDataFingerprint(ml, split.TestSet, Label);
+
+                    int trSnapId = InsertDatasetSnapshot(
+                        conn, tx,
+                        sourceView: "dbo.vStudentMLTrainingData",
+                        selectionQuery: "(AutoML split TRAIN 80% by ExitReason, seed=0)",
+                        rowCount: trRows,
+                        featureSchemaHash: trSchemaHash,
+                        dataHash: trFingerprint,
+                        notes: "Backfill training set");
+
+                    int teSnapId = InsertDatasetSnapshot(
+                        conn, tx,
+                        sourceView: "dbo.vStudentMLTrainingData",
+                        selectionQuery: "(AutoML split TEST 20% by ExitReason, seed=0)",
+                        rowCount: teRows,
+                        featureSchemaHash: teSchemaHash,
+                        dataHash: teFingerprint,
+                        notes: "Backfill test set");
+
+                    LinkModelToSnapshot(conn, tx, modelId, trSnapId, "TRAIN");
+                    LinkModelToSnapshot(conn, tx, modelId, teSnapId, "TEST");
 
                     tx.Commit();
                     return modelId;
@@ -559,18 +635,24 @@ Test Metrics (Multiclass)
                 }
             }
 
-            private static int InsertSnapshot(SqlConnection conn, SqlTransaction tx, string source, string sel, int count)
+
+
+
+            private static bool IsInDesignMode()
             {
-                using var cmd = new SqlCommand($@"
-                INSERT INTO {DatabaseConfig.TableDatasetSnapshot}
-                (SourceView, SelectionQuery, RowCount)
-                OUTPUT INSERTED.SnapshotID
-                VALUES (@src,@sel,@cnt);", conn, tx);
-                cmd.Parameters.AddWithValue("@src", source);
-                cmd.Parameters.AddWithValue("@sel", sel);
-                cmd.Parameters.AddWithValue("@cnt", count);
-                return (int)cmd.ExecuteScalar();
+                if (LicenseManager.UsageMode == LicenseUsageMode.Designtime) return true;
+                try
+                {
+                    string p = Process.GetCurrentProcess().ProcessName;
+                    return p.Equals("devenv", StringComparison.OrdinalIgnoreCase) ||
+                           p.Equals("Blend", StringComparison.OrdinalIgnoreCase);
+                }
+                catch { return false; }
+
+
+
+
             }
         }
     }
-}
+}   
