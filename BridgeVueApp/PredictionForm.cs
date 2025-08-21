@@ -87,7 +87,7 @@ namespace BridgeVueApp
         }
 
 
-        
+
         // Handle the Predict Static button click
         private void btnPredictSatic_Click_1(object sender, EventArgs e)
         {
@@ -890,11 +890,11 @@ namespace BridgeVueApp
         }
 
 
-        
 
 
-            // Plot Accuracy & F1 over time
-            
+
+        // Plot Accuracy & F1 over time
+
 
         /// <summary>
         /// Hides any listed columns if *every* row is NULL/blank for that column.
@@ -1168,36 +1168,62 @@ namespace BridgeVueApp
         }
 
 
-            // Returns null instead of throwing when no model is available
-            private static BridgeVueApp.MachineLearning.BatchPredictor.LoadedModel? TryLoadCurrentModel()
+        // Returns null instead of throwing when no model is available
+        private static BridgeVueApp.MachineLearning.BatchPredictor.LoadedModel? TryLoadCurrentModel()
+        {
+            try { return BridgeVueApp.MachineLearning.BatchPredictor.LoadCurrentBest(); }
+            catch { return null; }
+        }
+
+        // Returns 0 if there is no current best / any model at all
+        private static int TryGetCurrentBestModelId()
+        {
+            using var conn = new Microsoft.Data.SqlClient.SqlConnection(DatabaseConfig.FullConnection);
+            conn.Open();
+
+            // current best first
+            using (var cmd = new Microsoft.Data.SqlClient.SqlCommand(
+                $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} WHERE IsCurrentBest = 1 ORDER BY TrainingDate DESC;", conn))
             {
-                try { return BridgeVueApp.MachineLearning.BatchPredictor.LoadCurrentBest(); }
-                catch { return null; }
+                var obj = cmd.ExecuteScalar();
+                if (obj != null) return (int)obj;
             }
 
-            // Returns 0 if there is no current best / any model at all
-            private static int TryGetCurrentBestModelId()
+            // else newest by date
+            using (var cmd2 = new Microsoft.Data.SqlClient.SqlCommand(
+                $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} ORDER BY TrainingDate DESC;", conn))
             {
-                using var conn = new Microsoft.Data.SqlClient.SqlConnection(DatabaseConfig.FullConnection);
-                conn.Open();
-
-                // current best first
-                using (var cmd = new Microsoft.Data.SqlClient.SqlCommand(
-                    $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} WHERE IsCurrentBest = 1 ORDER BY TrainingDate DESC;", conn))
-                {
-                    var obj = cmd.ExecuteScalar();
-                    if (obj != null) return (int)obj;
-                }
-
-                // else newest by date
-                using (var cmd2 = new Microsoft.Data.SqlClient.SqlCommand(
-                    $"SELECT TOP 1 ModelID FROM {DatabaseConfig.TableModelPerformance} ORDER BY TrainingDate DESC;", conn))
-                {
-                    var obj2 = cmd2.ExecuteScalar();
-                    if (obj2 != null) return (int)obj2;
-                }
-
-                return 0;
+                var obj2 = cmd2.ExecuteScalar();
+                if (obj2 != null) return (int)obj2;
             }
+
+            return 0;
+        }
+
+        private async void btnFeatureImportance_Click(object sender, EventArgs e)
+        {
+            //    btnFeatureImportance.Enabled = false;
+
+            //    var prog = new Progress<string>(s => AppendLog(s)); // reuse your RTB logger if you like
+            //    try
+            //    {
+            //        var rows = await Task.Run(() => FeatureImportance.ComputeAndSave(
+            //            overrideModelId: null,   // or pass a specific ModelID
+            //            maxRows: 3000,
+            //            seed: 0,
+            //            progress: prog));
+
+            //        dgvModelSummary.DataSource = rows;  // or your own grid on a new tab
+            //        dgvModelSummary.Refresh();
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        AppendLog("Feature importance failed: " + ex.Message);
+            //    }
+            //    finally
+            //    {
+            //        btnFeatureImportance.Enabled = true;
+            //    }
+        }
     }
 }

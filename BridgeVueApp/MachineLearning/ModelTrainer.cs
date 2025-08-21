@@ -256,7 +256,7 @@ namespace BridgeVueApp.MachineLearning
 
             progress?.Report(new TrainingStatus
             {
-                Message = $"✅ Training complete. MicroAcc {mc.MicroAccuracy:P2}, MacroAcc {mc.MacroAccuracy:P2}",
+                Message = $"Training complete. MicroAcc {mc.MicroAccuracy:P2}, MacroAcc {mc.MacroAccuracy:P2}",
                 BestTrainer = bestValTrainer,
                 BestValAccuracy = double.IsNaN(bestValAcc) ? null : bestValAcc,
                 ElapsedSeconds = sw.Elapsed.TotalSeconds,
@@ -649,10 +649,7 @@ namespace BridgeVueApp.MachineLearning
                 }
                 catch { return false; }
 
-
-
-
             }
         }
     }
-}   
+}

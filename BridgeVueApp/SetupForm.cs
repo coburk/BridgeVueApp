@@ -52,20 +52,20 @@ namespace BridgeVueApp
             try
             {
                 progressBar.Value = 0;
-                lblStatus.Text = "⏳ Dropping and recreating database...";
+                lblStatus.Text = "Dropping and recreating database...";
 
                 // Full reset logic
                 DatabaseInitializer.DropDatabaseIfExists();
                 DatabaseInitializer.CreateDatabaseIfNotExists();
                 DatabaseInitializer.CreateTablesIfNotExist();
 
-                lblStatus.Text = "✅ Database and tables recreated successfully.";
+                lblStatus.Text = "Database and tables recreated successfully.";
                 progressBar.Value = 100;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error: {ex.Message}", "Database Reset Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "❌ Database reset failed.";
+                lblStatus.Text = "Database reset failed.";
             }
         }
 
@@ -275,7 +275,7 @@ namespace BridgeVueApp
             catch (Exception ex)
             {
                 MessageBox.Show($"Synthetic data generation failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "❌ Synthetic data generation failed.";
+                lblStatus.Text = "Synthetic data generation failed.";
             }
         }
 
@@ -301,7 +301,7 @@ namespace BridgeVueApp
                 BVDatabase.BulkInsertExitData(DataGenerationUtils.GeneratedExitData);
                 progressBar.Value = 80;
 
-                lblStatus.Text = $"✅ Saved {DataGenerationUtils.GeneratedProfiles.Count} students to DB.";
+                lblStatus.Text = $"Saved {DataGenerationUtils.GeneratedProfiles.Count} students to DB.";
                 progressBar.Value = 100;
             }
 
@@ -309,7 +309,7 @@ namespace BridgeVueApp
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save to database: {ex.Message}");
-                lblStatus.Text = "❌ Save failed.";
+                lblStatus.Text = "Save failed.";
                 progressBar.Value = 0;
             }
         }
@@ -400,7 +400,7 @@ namespace BridgeVueApp
             }
             catch (Exception ex)
             {
-                lblStatus.Text = $"❌ Export Failed: {ex.Message}";
+                lblStatus.Text = $"Export Failed: {ex.Message}";
                 MessageBox.Show($"Failed to export CSV files:\n\n{ex.Message}", "Export Error",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
                 progressBar.Value = 0;

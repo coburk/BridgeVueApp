@@ -82,6 +82,7 @@
             tabHistory = new TabPage();
             dgvModelHistory = new DataGridView();
             sqlCommand1 = new Microsoft.Data.SqlClient.SqlCommand();
+            btnFeatureImportance = new Button();
             tabControl1.SuspendLayout();
             tabRandom.SuspendLayout();
             tabManual.SuspendLayout();
@@ -528,7 +529,6 @@
             tabBatch.TabIndex = 2;
             tabBatch.Text = "Batch Prediction";
             tabBatch.UseVisualStyleBackColor = true;
-            //tabBatch.Click += tabBatch_Click;
             // 
             // dgvBatchPrediction
             // 
@@ -630,6 +630,7 @@
             // 
             // tabModel
             // 
+            tabModel.Controls.Add(btnFeatureImportance);
             tabModel.Controls.Add(btnModelRefresh);
             tabModel.Controls.Add(dgvModelSummary);
             tabModel.Location = new Point(4, 24);
@@ -641,7 +642,7 @@
             // 
             // btnModelRefresh
             // 
-            btnModelRefresh.Location = new Point(249, 6);
+            btnModelRefresh.Location = new Point(101, 9);
             btnModelRefresh.Name = "btnModelRefresh";
             btnModelRefresh.Size = new Size(153, 23);
             btnModelRefresh.TabIndex = 1;
@@ -687,6 +688,16 @@
             // 
             sqlCommand1.CommandTimeout = 30;
             sqlCommand1.EnableOptimizedParameterBinding = false;
+            // 
+            // btnFeatureImportance
+            // 
+            btnFeatureImportance.Location = new Point(406, 9);
+            btnFeatureImportance.Name = "btnFeatureImportance";
+            btnFeatureImportance.Size = new Size(149, 23);
+            btnFeatureImportance.TabIndex = 2;
+            btnFeatureImportance.Text = "Feature Importance";
+            btnFeatureImportance.UseVisualStyleBackColor = true;
+            btnFeatureImportance.Click += btnFeatureImportance_Click;
             // 
             // PredictionForm
             // 
@@ -784,5 +795,6 @@
         private TabPage tabHistory;
         private DataGridView dgvModelHistory;
         private Microsoft.Data.SqlClient.SqlCommand sqlCommand1;
+        private Button btnFeatureImportance;
     }
 }
