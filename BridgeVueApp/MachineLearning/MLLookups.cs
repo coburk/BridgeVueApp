@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 
+namespace BridgeVueApp.MachineLearning;
+
 public static class MLLookups
 {
     public static readonly Dictionary<int, string> Gender = new()

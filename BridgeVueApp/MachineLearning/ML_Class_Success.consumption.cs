@@ -5,7 +5,10 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Collections.Generic;
-namespace BridgeVueApp
+using System.Diagnostics;
+
+
+namespace BridgeVueApp.MachineLearning
 {
     public partial class ML_Class_Success
     {
@@ -297,7 +300,49 @@ namespace BridgeVueApp
 
         #endregion
 
-        private static string MLNetModelPath = Path.GetFullPath("ML_Class_Success.mlnet");
+        private static string ResolveModelPath()
+        {
+            // optional override via env var if you ever need it
+            var env = Environment.GetEnvironmentVariable("BV_MODEL_PATH");
+            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+                return env;
+
+            var baseDir = AppContext.BaseDirectory;
+
+            // common locations under the output folder
+            string[] candidates =
+            {
+        Path.Combine(baseDir, "MachineLearning", "ML_Class_Success.mlnet"),
+        Path.Combine(baseDir, "MachineLearning", "Models", "ML_Class_Success.mlnet"),
+        Path.Combine(baseDir, "MachineLearning", "Models", "MLModel.mlnet"),
+        Path.Combine(baseDir, "MachineLearning", "Models", "MLModel.zip"),
+        Path.Combine(baseDir, "Models", "ML_Class_Success.mlnet"),
+        Path.Combine(baseDir, "Models", "MLModel.mlnet"),
+        Path.Combine(baseDir, "Models", "MLModel.zip"),
+        Path.Combine(baseDir, "ML_Class_Success.mlnet"), // legacy
+        Path.Combine(baseDir, "MLModel.zip")             // legacy
+    };
+
+            var hit = candidates.FirstOrDefault(File.Exists);
+            if (hit != null) return hit;
+
+            // last-chance: scan MachineLearning\Models if it exists
+            var scan = Path.Combine(baseDir, "MachineLearning", "Models");
+            if (Directory.Exists(scan))
+            {
+                var any = Directory.EnumerateFiles(scan, "*.*")
+                                   .FirstOrDefault(p => p.EndsWith(".mlnet", StringComparison.OrdinalIgnoreCase)
+                                                     || p.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                if (any != null) return any;
+            }
+
+            // helpful diagnostics for you
+            var msg = $"Model file not found. Looked under:\n" +
+                      string.Join("\n", candidates) +
+                      $"\nBaseDir: {baseDir}";
+            Debug.WriteLine(msg);
+            throw new FileNotFoundException(msg);
+        }
 
         public static readonly Lazy<PredictionEngine<ModelInput, ModelOutput>> PredictEngine = new Lazy<PredictionEngine<ModelInput, ModelOutput>>(() => CreatePredictEngine(), true);
 
@@ -305,9 +350,12 @@ namespace BridgeVueApp
         private static PredictionEngine<ModelInput, ModelOutput> CreatePredictEngine()
         {
             var mlContext = new MLContext();
-            ITransformer mlModel = mlContext.Model.Load(MLNetModelPath, out var _);
+            var modelPath = ResolveModelPath();
+            ITransformer mlModel = mlContext.Model.Load(modelPath, out _);
             return mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(mlModel);
         }
+
+
 
         /// <summary>
         /// Use this method to predict scores for all possible labels.

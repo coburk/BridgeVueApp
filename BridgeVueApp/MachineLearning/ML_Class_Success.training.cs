@@ -9,10 +9,9 @@ using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.Trainers;
 using Microsoft.ML.Transforms;
-using System.Data.SqlClient;
-using Microsoft.ML.Data;
 
-namespace BridgeVueApp
+
+namespace BridgeVueApp.MachineLearning
 {
     public partial class ML_Class_Success
     {
@@ -44,7 +43,7 @@ namespace BridgeVueApp
         public static IDataView LoadIDataViewFromDatabase(MLContext mlContext, string connectionString, string commandText)
         {
             DatabaseLoader loader = mlContext.Data.CreateDatabaseLoader<ModelInput>();
-            DatabaseSource dbSource = new DatabaseSource(SqlClientFactory.Instance, connectionString, commandText);
+            var dbSource = new DatabaseSource(Microsoft.Data.SqlClient.SqlClientFactory.Instance, connectionString, commandText);
 
             return loader.Load(dbSource);
         }

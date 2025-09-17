@@ -5,13 +5,30 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Resources\favicon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="SetupForm - BeforeCleanup.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="MachineLearning\ML_Class_Success.mlnet">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\favicon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\BridgeVueIcon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.6.3" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
     <PackageReference Include="Microsoft.ML" Version="4.0.2" />
+    <PackageReference Include="Microsoft.ML.AutoML" Version="0.22.2" />
     <PackageReference Include="Microsoft.ML.LightGbm" Version="4.0.2" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
+    <PackageReference Include="ScottPlot.WinForms" Version="5.0.55" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
@@ -26,9 +43,15 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup Label="ML_Class_Success">
-    <None Include="ML_Class_Success.mlnet">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  <ItemGroup>
+    <None Update="Resources\Calm.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\Happy.png">
+      <CustomToolNamespace>Happy</CustomToolNamespace>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="MachineLearning\MLArtifacts\" />
   </ItemGroup>
 </Project>

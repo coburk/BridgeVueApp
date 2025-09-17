@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BridgeVueApp
+namespace BridgeVueApp.MachineLearning
 {
     public partial class ML_Class_Success
     {
